@@ -1,9 +1,8 @@
 import React from 'react'
+import MinistryTable from './MinistryTable'
 
 export default function CreateMinistry() {
   return (
-    <div>
-      <h1>Ministries will be created here</h1>
-    </div>
+    <MinistryTable/>
   )
 }

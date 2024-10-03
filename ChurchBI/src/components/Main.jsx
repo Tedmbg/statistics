@@ -17,11 +17,9 @@ import Demographics from "../pages/membership-management/demographics/Demographi
 import AddMember from "../pages/membership-management/addmember/AddMember";
 import Discipleship from "../pages/membership-management/discipleship/Discipleship";
 import Attendance from "../pages/membership-management/attendence/Attendance";
-import FellowshipMinistry from "../pages/ministries/FellowshipMinistry";
-import ServiceMinistry from "../pages/ministries/ServiceMinistry";
-import CreateMinistry from "../pages/ministries/CreateMinistry";
-
-
+import ServiceMinistry from "../pages/ministries/service-ministry/ServiceMinistry"
+import CreateMinistry from "../pages/ministries/create-ministry/CreateMinistry";
+import FellowshipMinistry from "../pages/ministries/fellowship-ministry/FellowshipMinistry"
 const router = createBrowserRouter(
     createRoutesFromChildren(
         <Route path="/" element={<RootLayout/>}>
