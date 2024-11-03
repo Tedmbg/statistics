@@ -20,7 +20,8 @@ import Attendance from "../pages/membership-management/attendence/Attendance";
 import ServiceMinistry from "../pages/ministries/service-ministry/ServiceMinistry"
 import CreateMinistry from "../pages/ministries/create-ministry/CreateMinistry";
 import FellowshipMinistry from "../pages/ministries/fellowship-ministry/FellowshipMinistry"
-import Babtism from "../pages/membership-management/babtism/Babtism";
+import Baptism from "../pages/membership-management/baptism/Baptism";
+
 const router = createBrowserRouter(
     createRoutesFromChildren(
         <Route path="/" element={<RootLayout/>}>
@@ -33,7 +34,7 @@ const router = createBrowserRouter(
             <Route path="fellowshipMinistry" element={<FellowshipMinistry/>}/>
             <Route path="serviceMinistry" element={<ServiceMinistry/>}/>
             <Route path="createMinistry" element={<CreateMinistry/>}/>
-            <Route path="babtism" element={<Babtism/>} />
+            <Route path="baptism" element={<Baptism/>} />
 
            
         </Route>
