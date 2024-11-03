@@ -20,11 +20,12 @@ import Attendance from "../pages/membership-management/attendence/Attendance";
 import ServiceMinistry from "../pages/ministries/service-ministry/ServiceMinistry"
 import CreateMinistry from "../pages/ministries/create-ministry/CreateMinistry";
 import FellowshipMinistry from "../pages/ministries/fellowship-ministry/FellowshipMinistry"
+import Babtism from "../pages/membership-management/babtism/Babtism";
 const router = createBrowserRouter(
     createRoutesFromChildren(
         <Route path="/" element={<RootLayout/>}>
             <Route index element={<Dashboard/>}/>
-             <Route path="retantionRate" element={<RetentionRate/>}/> 
+            <Route path="retantionRate" element={<RetentionRate/>}/> 
             <Route path="demographics" element={<Demographics/>}/>
             <Route path="addMember" element={<AddMember/>}/>
             <Route path="discipleship" element={<Discipleship/>}/>
@@ -32,6 +33,7 @@ const router = createBrowserRouter(
             <Route path="fellowshipMinistry" element={<FellowshipMinistry/>}/>
             <Route path="serviceMinistry" element={<ServiceMinistry/>}/>
             <Route path="createMinistry" element={<CreateMinistry/>}/>
+            <Route path="babtism" element={<Babtism/>} />
 
            
         </Route>
