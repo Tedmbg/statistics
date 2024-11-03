@@ -1,53 +1,61 @@
-import { Avatar, Box, Button, Paper, Typography } from "@mui/material";
-import Divider from '@mui/material/Divider';
-import AsideArticle from "../../components/AsideArticle";
-import CardThreeRow from "../../components/CardThreeRow";
-// Icons
-import GroupsIcon from '@mui/icons-material/Groups';
+import { Box, Paper, Typography } from "@mui/material";
+import dashboardData from './dashboard.json'; // Import the JSON data
 
 
-export default function DashboardCard() {
+function DashboardCard() {
   return (
     <Box
       sx={{
         display: 'flex',
+        flexDirection:'row',
+        gap:9,
+        mt:6,
+        ml:6,
         flexWrap: 'wrap',
         '& > :not(style)': {
           m: 1,
           maxWidth: 390,
-          padding:"2em 2em",
-          borderRadius:"2rem",
-          cursor:"pointer",
-          userSelect:"none",
-          backgroundColor:"#FFFFFF",   
-        },    
+          padding: "2em 2em",
+          borderRadius: "2rem",
+          cursor: "pointer",
+          userSelect: "none",
+          backgroundColor: "#FFFFFF",
+        },
       }}
     >
-      <Paper 
-        sx={{
-          display:'flex',
-          alignItems:'center',
-          justifyContent:'center',
-          gap:'2em',
-          margin: "auto",
-        }}
-        
-      >
-          <GroupsIcon 
+      {dashboardData.map((item) => (
+        <Paper
+          key={item.id}
           sx={{
-            fontSize:"3rem",
-     
-          }}/>
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '2em',
+            margin: "auto",
+            width:'20em',
+          }}
+        >
+          <img
+            src={item.icon} // Use icon path from JSON data
+            style={{ width: 70, height: 70 ,objectFit:"contain"}}
+          />
           <Box>
-            <Typography 
+            <Typography
               variant="h3"
               color="black"
-              >1245</Typography>
+            >
+              {item.value}
+            </Typography>
             <Typography
               variant="subtitle"
-            >Total number Ministry</Typography>
+            >
+              {item.title}
+            </Typography>
           </Box>
-      </Paper>
-    </Box> 
+        </Paper>
+      ))}
+    </Box>
   );
 }
+
+export default DashboardCard;
