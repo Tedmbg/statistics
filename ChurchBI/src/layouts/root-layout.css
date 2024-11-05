@@ -1,4 +1,5 @@
 .root-layout {
+  --width-side-bar:250px;
     display: flex;
     height: 100vh;
     overflow: hidden;
@@ -8,14 +9,14 @@
     position: fixed;
     top: 0;
     left: 0;
-    width: 250px;
+    width:var(--width-side-bar);
     height: 100vh;
     overflow-y: scroll;
     background-color: #070000;
   }
   
   .main-content {
-    margin-left: 260px;
+    margin-left: var(--width-side-bar);
     flex-grow: 1;
     height: 100vh;
     overflow-y: auto;

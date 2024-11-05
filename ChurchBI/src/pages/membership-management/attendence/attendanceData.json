@@ -1,0 +1,33 @@
+[
+    {
+      "id": 1,
+      "name": "John Muhiki",
+      "absentees": 0,
+      "percentage": 100
+    },
+    {
+      "id": 2,
+      "name": "Kim Lope",
+      "absentees": 3,
+      "percentage": 70
+    },
+    {
+      "id": 3,
+      "name": "Doiem Pemch",
+      "absentees": 1,
+      "percentage": 90
+    },
+    {
+      "id": 4,
+      "name": "Rachei Odnie",
+      "absentees": 2,
+      "percentage": 80
+    },
+    {
+      "id": 5,
+      "name": "Siend Frow",
+      "absentees": 5,
+      "percentage": 50
+    }
+  ]
+  
