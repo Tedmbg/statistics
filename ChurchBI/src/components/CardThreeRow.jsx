@@ -1,18 +1,14 @@
 import { Box, Paper, Typography } from '@mui/material';
 import FunctionsIcon from '@mui/icons-material/Functions';
 
-export default function CardThreeRow() {
+export default function CardThreeRow({text,number}) {
   return (
     <Box
       sx={{
         display: 'flex',
         flexWrap: 'wrap',
-        '& > :not(style)': {
-          m: 1,
-          width: 310,
-          height: 150,
-          padding:"1rem"
-        },
+        
+       
       }}
     >
       <Paper
@@ -23,16 +19,19 @@ export default function CardThreeRow() {
           justifyContent: 'center', 
           alignItems: 'center',
           textAlign: 'center',
-          borderRadius:"1rem"
+          borderRadius:"1rem",
+          padding:"1rem 4rem",
+          width:"20rem",
+          
         }}
       >
         <FunctionsIcon sx={{fontSize:"4em"}} />
-        <Typography fontSize="1.5rem">Total Number of Members
+        <Typography fontSize="1.5rem">{text}
         </Typography>
         <Typography sx={{
             fontWeight:"bolder",
             fontSize:"1.4rem"
-        }}>13</Typography>
+        }}>{number}</Typography>
       </Paper>
     </Box>
   );

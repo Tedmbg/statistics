@@ -60,7 +60,7 @@ const tokens = {
     },
     // Neutral colors 
     neutral: {
-        100: "#f5f5f2", 
+        100: "#E0E0E0 ", 
         200: "#deeaf2", 
         300: "#cacaca",
         400: "#8088a4", 

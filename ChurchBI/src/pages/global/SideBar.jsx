@@ -84,6 +84,13 @@ export default function SideBar() {
             Add Member
           </MenuItem>
           <MenuItem
+            component={<NavLink to="baptism" />}
+            active={checkActive("/baptism")}
+            icon={<ArrowRightOutlinedIcon />}
+          >
+            Baptism
+          </MenuItem>
+          <MenuItem
             component={<NavLink to="attendance" />}
             active={checkActive("/attendance")}
             icon={<ArrowRightOutlinedIcon />}
