@@ -7,12 +7,7 @@ export default function CardThreeRow() {
       sx={{
         display: 'flex',
         flexWrap: 'wrap',
-        '& > :not(style)': {
-          m: 1,
-          width: 310,
-          height: 150,
-          padding:"1rem"
-        },
+       
       }}
     >
       <Paper
@@ -23,7 +18,8 @@ export default function CardThreeRow() {
           justifyContent: 'center', 
           alignItems: 'center',
           textAlign: 'center',
-          borderRadius:"1rem"
+          borderRadius:"1rem",
+          padding:"1rem 4rem"
         }}
       >
         <FunctionsIcon sx={{fontSize:"4em"}} />
