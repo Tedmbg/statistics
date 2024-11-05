@@ -44,6 +44,7 @@ export default function Demographics() {
             title={"Gender"}
             shape={<DoughnutC data={sampleData.genderDistribution}/>}
             />
+            
       </div>
     </div>
   )

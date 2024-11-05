@@ -3,7 +3,6 @@
 *::before{
     box-sizing: border-box;
 }
-
 .demographic-card{
     flex-grow: 1;
     display: flex; 
