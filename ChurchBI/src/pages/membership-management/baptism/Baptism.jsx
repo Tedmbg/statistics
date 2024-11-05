@@ -37,7 +37,9 @@ function Baptism() {
   };
   
   return (
-    <>
+    <div style={{
+      padding:"0 1rem"
+    }}>
     {/* top header */}
     <Box sx={{
       position: "sticky",
@@ -75,29 +77,12 @@ function Baptism() {
 
     {/* main content */}
 
-    <Box>
-      <Box sx={{
-        display:"flex",
-        flexDirection:"column",
-        gap:"4em"
-      }}>
-        <CardThreeRow text="Total Members" number={12}/>
-        <div>
-          <Button
-          variant="outlined" 
-          startIcon={<AddCircleIcon sx={{
-            color:"white"
-          }}/>}
-          sx={{
-            backgroundColor:"#3a85fe",
-            padding:"1rem 1.5rem",
-            marginBottom:"2rem",
-          }}
-          >
-            Add Member
-          </Button>
-        </div>
-      </Box>
+    <Box sx={{
+      display:"grid",
+      gridTemplateColumns:"2fr 1fr",
+      marginTop:"2rem",
+      gap:"2rem",
+    }}>
       
 
       <Box sx={{
@@ -105,8 +90,34 @@ function Baptism() {
       }}>
           <BarChart data={baptismBarData}/>
       </Box>
+        <Box sx={{
+          display:"flex",
+          flexDirection:"column",
+          gap:"4em"
+        }}>
+          <CardThreeRow text="Total Members" number={12}/>
+  
+          <div>
+            <Button
+            variant="outlined" 
+            startIcon={<AddCircleIcon sx={{
+              color:"white"
+            }}/>}
+            sx={{
+              backgroundColor:"#3a85fe",
+              padding:"1rem 1.5rem",
+              marginBottom:"2rem",
+              color:"#fff",
+              textTransform:"capitalize"
+              
+            }}
+            >
+              Add Member
+            </Button>
+          </div>
+        </Box>
     </Box>
-    </>
+    </div>
   )
 }
 
