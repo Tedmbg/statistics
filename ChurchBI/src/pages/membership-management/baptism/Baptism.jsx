@@ -40,7 +40,6 @@ function Baptism() {
     <>
     {/* top header */}
     <Box sx={{
-      border: "1px solid red",
       position: "sticky",
       display: "flex",
       top: "0",
@@ -82,7 +81,7 @@ function Baptism() {
         flexDirection:"column",
         gap:"4em"
       }}>
-        <CardThreeRow/>
+        <CardThreeRow text="Total Members" number={12}/>
         <div>
           <Button
           variant="outlined" 
@@ -91,7 +90,8 @@ function Baptism() {
           }}/>}
           sx={{
             backgroundColor:"#3a85fe",
-            padding:"1rem 1.5rem"
+            padding:"1rem 1.5rem",
+            marginBottom:"2rem",
           }}
           >
             Add Member
@@ -100,7 +100,9 @@ function Baptism() {
       </Box>
       
 
-      <Box>
+      <Box sx={{
+        maxWidth:"60rem"
+      }}>
           <BarChart data={baptismBarData}/>
       </Box>
     </Box>
