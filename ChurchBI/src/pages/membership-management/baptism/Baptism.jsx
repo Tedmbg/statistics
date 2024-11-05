@@ -1,22 +1,38 @@
-import { Box } from "@mui/material";
+
 import DoughnutC from "../../../components/DoughnutC";
-const data ={
-  datasets: [{
-      data: [20,30],
-      backgroundColor:[
-          '#3a85fe',
-          '#8d78eb'
-      ]
-    }],
-  labels:[
-      "Employed",
-      "Unemployed",
+import LineChart from "../../../components/LineChart";
+
+
+// member data 
+
+
+const memberData={
+    labels:[
+      'Jan',
+      'Feb',
+      'March',
+      'Apr'
+    ],
+    datasets:[
+      {
+      data:[65,34,12,56,78],
+      fill:false,
+      radius:3,
+      borderColor:'#5687F2'
+      }
   ]
 }
 
 function Baptism() {
   return (
-      <DoughnutC data={data}/>
+    <> 
+    {/* <div style={{
+   width:"20rem"
+     }}> <DoughnutC data={workData}/></div> */}
+     <div style={{
+      width:"20rem"
+     }}> <LineChart data={memberData}/></div>
+     </>
   )
 }
 
