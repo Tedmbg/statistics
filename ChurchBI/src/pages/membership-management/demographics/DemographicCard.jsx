@@ -1,5 +1,4 @@
-import { Box, Paper, Typography } from "@mui/material"
-import DoughnutC from "../../../components/DoughnutC"
+import {  Paper, Typography } from "@mui/material"
 import "./Demographics-card.css"
 
 function DemographicCard({title,shape}) {
@@ -19,7 +18,8 @@ function DemographicCard({title,shape}) {
             color:'black',
             fontSize:"1.5rem",
             fontWeight:"bold",
-            marginBottom:"1rem"
+            marginBottom:"1rem",
+            textTransform:"capitalize",
         }
         }
         >{title}</Typography>
