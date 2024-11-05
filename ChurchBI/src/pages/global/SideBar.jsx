@@ -88,7 +88,7 @@ export default function SideBar() {
             active={checkActive("/baptism")}
             icon={<ArrowRightOutlinedIcon />}
           >
-            Babtism
+            Baptism
           </MenuItem>
           <MenuItem
             component={<NavLink to="attendance" />}
