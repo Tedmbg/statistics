@@ -1,8 +1,5 @@
 import { Box, Card, Typography, Grid, Avatar } from "@mui/material";
 import {
-  PieChart,
-  Pie,
-  Cell,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -10,14 +7,29 @@ import {
   YAxis,
   Tooltip,
 } from "recharts";
+import DoughnutC from "../../../components/DoughnutC";
+// import sampleData from '../../membership-management/demographics/demodata';
 
-// Dummy data for the charts (placeholders)
-const ageData = [
-  { name: "18 - 25", value: 20 },
-  { name: "33 - 45", value: 20 },
-  { name: "33 - 45", value: 20 },
-  { name: "33 - 45", value: 20 },
-];
+
+
+const   ageDistribution = {
+  labels: ["18 - 25", "26 - 35", "36 - 45", "46+"],
+  datasets: [
+    {
+      data: [25, 30, 20, 25],
+      backgroundColor: ["#f8766d", "#7bbf5e", "#f0a500", "#b4b7c6"]
+    }
+  ]
+}
+const   workStatus = {
+  labels: ["Employed", "Unemployed"],
+  datasets: [
+    {
+      data: [80, 20],
+      backgroundColor: ["#6c8ef2", "#8d78eb"]
+    }
+  ]
+}
 const workStatusData = [
   { name: "Employed", value: 80 },
   { name: "Unemployed", value: 20 },
@@ -32,7 +44,9 @@ const ministryGrowthData = [
 ];
 
 function FellowshipMinistry() {
+  // console.log(sampleData);
   return (
+
     <Box sx={{ padding: "2rem" }}>
       <Typography variant="h4" fontWeight="bold" gutterBottom>
         Fellowship Activity Overview
@@ -106,62 +120,12 @@ function FellowshipMinistry() {
         <Grid item xs={12} md={4}>
           <Card sx={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
             <Typography variant="h6">Age</Typography>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={ageData}
-                  dataKey="value"
-                  outerRadius={80}
-                  fill="#82ca9d"
-                >
-                  {ageData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={
-                        ["#ffbb28", "#ff8042", "#0088fe", "#00c49f"][
-                          index % 4
-                        ]
-                      }
-                    />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <Box sx={{ textAlign: 'center', marginTop: '1rem' }}>
-                {ageData.map((entry, index) => (
-                  <Typography key={`age-label-${index}`} variant="body2">
-                    {entry.name}: {entry.value}%
-                  </Typography>
-                ))}
-              </Box>
+            <DoughnutC data = {ageDistribution} />                
           </Card>
 
           <Card sx={{ padding: "1.5rem" }}>
             <Typography variant="h6">Work Status</Typography>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={workStatusData}
-                  dataKey="value"
-                  outerRadius={80}
-                  fill="#8884d8"
-                >
-                  {workStatusData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={["#8884d8", "#82ca9d"][index % 2]}
-                    />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <Box sx={{ textAlign: 'center', marginTop: '1rem' }}>
-                {workStatusData.map((entry, index) => (
-                  <Typography key={`work-status-label-${index}`} variant="body2">
-                    {entry.name}: {entry.value}%
-                  </Typography>
-                ))}
-              </Box>
+            <DoughnutC data = {workStatus} /> 
           </Card>
         </Grid>
           

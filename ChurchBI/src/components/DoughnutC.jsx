@@ -1,23 +1,20 @@
-// components/DoughnutC.js
-import React from "react";
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS } from "chart.js/auto";
 
 function DoughnutC(props) {
   const options = {
     responsive: true,
-    cutout: "70%", // Setting the cutout here to make it a donut
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: 'bottom',
         labels: {
-          color: "#333", // Adjust legend label color if needed
-        },
-      },
-    },
-    layout: {
-      padding: 20, // Add padding to give some space around the chart
-    },
+          usePointStyle: true,
+          pointStyle: 'circle',
+          padding: 15,
+        }
+      }
+    }
   };
 
   return (
