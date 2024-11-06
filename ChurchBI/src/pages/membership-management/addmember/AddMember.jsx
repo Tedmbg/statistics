@@ -239,7 +239,7 @@ function AddMemberForm() {
         
     
       </Grid>
-      <Box sx={{ textAlign: 'center', marginTop: '2rem' }}>
+      <Box sx={{ textAlign: 'right', marginTop: '2rem', marginRight: '1.9rem' }}>
         <Button variant="contained"  sx={{ padding: '0.5rem 2rem', backgroundColor:"#3a85fe" }}>
           Submit
         </Button>
