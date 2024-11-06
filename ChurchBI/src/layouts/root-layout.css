@@ -20,6 +20,7 @@
     flex-grow: 1;
     height: 100vh;
     overflow-y: auto;
+    background-color: #D9D9D9;
   }
   .ps-sidebar-root{
     background-color: #070000;
