@@ -3,6 +3,7 @@ import { sampleData } from "./demodata"
 import DemographicCard from "./DemographicCard"
 import DoughnutC from "../../../components/DoughnutC"
 import LineChart from "../../../components/LineChart"
+import StackedBar from "./StackedBar"
 
 export default function Demographics() {
   return (
@@ -38,19 +39,34 @@ export default function Demographics() {
               shape={<LineChart data={sampleData.membershipOverTime}/>}
               />
           </Box>
+          <Box sx={{
+            display:"flex",
+            gap:"1rem",
+            marginBottom:'1rem',
+
+          }}>
+              <DemographicCard 
+              title={"Resdence"}
+              shape={<DoughnutC data={sampleData.ageDistribution}/>}
+              />
+              <DemographicCard 
+              title={"Count of Origin"}
+              shape={<DoughnutC data={sampleData.workStatus}/>}
+              />
+          </Box>
         </div>
 
         <div className="demographic-right-content">
-        <DemographicCard 
-              
-              title={"Location"}
-              shape={<DoughnutC data={sampleData.locationDistribution}/>}
-              />
             <DemographicCard 
-              title={"Gender"}
-              shape={<DoughnutC data={sampleData.genderDistribution}/>}
-              />
-              
+                
+                title={"Location"}
+                shape={<DoughnutC data={sampleData.locationDistribution}/>}
+                />
+              <DemographicCard 
+                title={"Gender"}
+                shape={<DoughnutC data={sampleData.genderDistribution}/>}
+                />
+               <StackedBar/> 
         </div>
       </div>
     </div>
