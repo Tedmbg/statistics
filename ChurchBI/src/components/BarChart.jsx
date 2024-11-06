@@ -2,7 +2,7 @@
 import { Card, Typography } from "@mui/material";
 import { Bar } from "react-chartjs-2";
 
-const BarChart = ({ data, options, title, height = 400 }) => {
+const BarChart = ({ data, options, title, height = 545 }) => {
   return (
     <Card sx={{ padding: "1.5rem" }}>
       {title && (

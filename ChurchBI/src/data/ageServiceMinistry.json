@@ -1,0 +1,10 @@
+{
+    "labels": ["18 - 25 age", "33 - 45 age"],
+    "datasets": [
+      {
+        "data": [60, 40],
+        "backgroundColor": ["#ffbb28", "#ff8042"]
+      }
+    ]
+  }
+  

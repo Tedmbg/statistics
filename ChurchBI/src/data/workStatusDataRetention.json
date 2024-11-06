@@ -1,0 +1,11 @@
+{
+    "labels": ["Employed", "Unemployed"],
+    "datasets": [
+      {
+        "label": "Work Status",
+        "data": [80, 20],
+        "backgroundColor": ["#8884d8", "#82ca9d"]
+      }
+    ]
+  }
+  
