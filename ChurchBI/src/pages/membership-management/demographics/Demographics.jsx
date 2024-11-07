@@ -15,58 +15,31 @@ export default function Demographics() {
        }}
        >Overview</Typography>
       <div className="demographic-container">
+        <div className="left-demo-content">
+        
+        <div style={{
+          display:"flex",
+          width:"20rem",
+          height:"18rem",
+          gap:"1em",
+          border:"1px solid blue"
+        }}>
+          <div>
+            <DemographicCard data={sampleData.locationDistribution} title="Data"/>
+          </div>
+          <div>
+            <DemographicCard data={sampleData.locationDistribution} title="Data"/>
+          </div>
+          </div>
 
-        <div className="demographic-left-content">
-          <Box sx={{
-            display:"flex",
-            gap:"1rem",
-            marginBottom:'1rem',
-
-          }}>
-              <DemographicCard 
-              title={"age"}
-              shape={<DoughnutC data={sampleData.ageDistribution}/>}
-              />
-              <DemographicCard 
-              title={"Work status"}
-              shape={<DoughnutC data={sampleData.workStatus}/>}
-              />
-          </Box>
-            
-          <Box>
-          <DemographicCard 
-              title={"membership"}
-              shape={<LineChart data={sampleData.membershipOverTime}/>}
-              />
-          </Box>
-          <Box sx={{
-            display:"flex",
-            gap:"1rem",
-            marginBottom:'1rem',
-
-          }}>
-              <DemographicCard 
-              title={"Resdence"}
-              shape={<DoughnutC data={sampleData.ageDistribution}/>}
-              />
-              <DemographicCard 
-              title={"Count of Origin"}
-              shape={<DoughnutC data={sampleData.workStatus}/>}
-              />
-          </Box>
+          <div style={{maxWidth:"42.5rem"}}>
+            <LineChart data={sampleData.membershipOverTime}/>
+          </div>
         </div>
 
-        <div className="demographic-right-content">
-            <DemographicCard 
-                
-                title={"Location"}
-                shape={<DoughnutC data={sampleData.locationDistribution}/>}
-                />
-              <DemographicCard 
-                title={"Gender"}
-                shape={<DoughnutC data={sampleData.genderDistribution}/>}
-                />
-               <StackedBar/> 
+        <div className="right-demo-content">
+          <DemographicCard data={sampleData.ageDistribution} title="Data"/>
+          
         </div>
       </div>
     </div>

@@ -20,8 +20,9 @@ function DoughnutC(props) {
   return (
     <div
       style={{
-        width: "31.25rem",
-        height: "31.25rem",
+        // width: "31.25rem",
+        // height: "31.25rem",
+        width:"100%",
         backgroundColor: "#FFFFFF", // White background for the container
         padding: "1rem",
         borderRadius: "8px", // Optional: rounded corners
