@@ -1,0 +1,16 @@
+{
+    "labels": ["Yth", "wrsh", "Yth", "pry", "Trf", "Hc", "ush", "Tns", "Hsp"],
+    "datasets": [
+      {
+        "label": "Male",
+        "data": [10, 20, 15, 25, 20, 30, 20, 25, 15],
+        "backgroundColor": "#4e79a7"
+      },
+      {
+        "label": "Female",
+        "data": [15, 10, 18, 17, 10, 8, 15, 12, 10],
+        "backgroundColor": "#a0cbe8"
+      }
+    ]
+  }
+  

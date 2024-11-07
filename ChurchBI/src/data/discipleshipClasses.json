@@ -1,0 +1,32 @@
+[
+  {
+    "className": "Class 1",
+    "leaderName": "John Kimani",
+    "label": "mb .12",
+    "avatar": "path/to/avatar1.jpg"
+  },
+  {
+    "className": "Class 5",
+    "leaderName": "Lady John",
+    "label": "mb .16",
+    "avatar": "path/to/avatar2.jpg"
+  },
+  {
+    "className": "Class 9",
+    "leaderName": "Zack Chesoni",
+    "label": "mb .19",
+    "avatar": "path/to/avatar3.jpg"
+  },
+  {
+    "className": "Class 2",
+    "leaderName": "Shem Mustafa",
+    "label": "mb .22",
+    "avatar": "path/to/avatar4.jpg"
+  },
+  {
+    "className": "Class 3",
+    "leaderName": "Jane Rotich",
+    "label": "mb .23",
+    "avatar": "path/to/avatar5.jpg"
+  }
+]

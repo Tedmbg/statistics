@@ -18,8 +18,16 @@ function DoughnutC(props) {
   };
 
   return (
-    <div>
-      <Doughnut data={props.data} options={options}/>
+    <div
+      style={{
+        width: "31.25rem",
+        height: "31.25rem",
+        backgroundColor: "#FFFFFF", // White background for the container
+        padding: "1rem",
+        borderRadius: "8px", // Optional: rounded corners
+      }}
+    >
+      <Doughnut data={props.data} options={options} />
     </div>
   );
 }

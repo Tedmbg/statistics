@@ -1,3 +1,5 @@
+// RetentionRate.jsx
+
 import {
   Box,
   Card,
@@ -9,7 +11,6 @@ import {
   ListItemAvatar,
   ListItemText,
 } from "@mui/material";
-import { Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   BarElement,
@@ -20,6 +21,9 @@ import {
   Title,
 } from "chart.js";
 import BarChart from "../../../components/BarChart"; // Import the BarChart component
+import DoughnutC from "../../../components/DoughnutC"; // Import your custom DoughnutC component
+
+
 
 // Register Chart.js components
 ChartJS.register(
@@ -130,6 +134,9 @@ function RetentionRate() {
     plugins: {
       title: { display: true, text: "Age Distribution" },
       tooltip: { enabled: true },
+      legend: {
+        position: 'bottom',
+      },
     },
     cutout: "70%",
   };
@@ -150,6 +157,9 @@ function RetentionRate() {
     plugins: {
       title: { display: true, text: "Work Status" },
       tooltip: { enabled: true },
+      legend: {
+        position: 'bottom',
+      },
     },
     cutout: "70%",
   };
@@ -169,10 +179,12 @@ function RetentionRate() {
               padding: "1.5rem",
               backgroundColor: "#2B3868",
               color: "#fff",
-              height: "8.75rem",
+              height: "15.75rem",
               textAlign: "center",
             }}
           >
+            {/* Replace with your actual image path */}
+            <img src="assets/total members.png" alt="Total Members" />
             <Typography variant="h6">
               Total Number of Members in Discipleship Class
             </Typography>
@@ -182,13 +194,11 @@ function RetentionRate() {
 
         {/* Second Card */}
         <Grid item xs={12} md={3}>
-          <Card sx={{ padding: "1.5rem", height: "8.75rem" }}>
+          <Card sx={{ padding: "1.5rem", height: "15.75rem" }}>
             <Typography variant="h6">Gender Ratio</Typography>
             <Box display="flex" justifyContent="space-between">
               <Avatar sx={{ height: "3.75rem", width: "3.75rem" }}>👨</Avatar>
-              <Typography
-                sx={{ fontSize: "1.575rem", mt: 1, pl: 1, pr: 0.1 }}
-              >
+              <Typography sx={{ fontSize: "1.575rem", mt: 1, pl: 1, pr: 0.1 }}>
                 40%
               </Typography>
               <Avatar sx={{ height: "3.75rem", width: "3.75rem" }}>👩</Avatar>
@@ -206,13 +216,15 @@ function RetentionRate() {
               padding: "1.5rem",
               backgroundColor: "#2B3868",
               color: "#fff",
-              height: "8.75rem",
+              height: "15.75rem",
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
               alignItems: "center",
             }}
           >
+            {/* Replace with your actual image path */}
+            <img src="/assets/retationrate.png" alt="Retention Rate" />
             <Typography variant="h6">Retention Rate</Typography>
             <Typography variant="h3">17%</Typography>
           </Card>
@@ -225,13 +237,15 @@ function RetentionRate() {
               padding: "1.5rem",
               backgroundColor: "#2B3868",
               color: "#fff",
-              height: "8.75rem",
+              height: "15.75rem",
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
               alignItems: "center",
             }}
           >
+            {/* Replace with your actual image path */}
+            <img src="public/assets/visitor.png" alt="Just Visiting" />
             <Typography variant="h6">Just Visiting</Typography>
             <Typography variant="h3">107</Typography>
           </Card>
@@ -249,7 +263,7 @@ function RetentionRate() {
             data={retentionBarData}
             options={retentionBarOptions}
             title="Retention Rate"
-            height={695} // Adjust height if needed
+            height={"71.9895rem"} // Adjust height if needed
           />
         </Grid>
 
@@ -257,7 +271,7 @@ function RetentionRate() {
         <Grid item xs={12} md={4}>
           <Card sx={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
             <Typography variant="h6">Age Distribution</Typography>
-            <Doughnut
+            <DoughnutC
               data={ageDoughnutData}
               options={ageDoughnutOptions}
             />
@@ -265,7 +279,7 @@ function RetentionRate() {
 
           <Card sx={{ padding: "1.5rem" }}>
             <Typography variant="h6">Work Status</Typography>
-            <Doughnut
+            <DoughnutC
               data={workStatusDoughnutData}
               options={workStatusDoughnutOptions}
             />
