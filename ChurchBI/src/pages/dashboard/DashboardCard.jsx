@@ -1,8 +1,16 @@
 import { Box, Paper, Typography } from "@mui/material";
 import dashboardData from './dashboard.json'; // Import the JSON data
-
+import { useState,useEffect } from "react";
 
 function DashboardCard() {
+  const [members, setMembers] = useState();
+  useEffect(() => {
+    fetch('api/members/count')
+      .then((res) => res.json())
+
+      .then((data) => setMembers(data))
+      .catch((error) => console.error("Error fetching members count:", error));
+  }, []);
   return (
     <Box
       sx={{
