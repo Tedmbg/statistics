@@ -3,7 +3,11 @@ import DashboardCard from './DashboardCard';
 import { useState,useEffect } from "react";
 
 export default function Dashboard() {
-
+ useState(()=>{
+  fetch("https://statistics-production-032c.up.railway.app/")
+  .then(res=>res.json())
+  .then(data=>console.log(data))
+ },[])
   // State for the Year and Month dropdowns
   const [year, setYear] = useState(2024);
   const [month, setMonth] = useState("September");
