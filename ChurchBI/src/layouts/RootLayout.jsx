@@ -1,4 +1,4 @@
-import { useState } from "react";
+
 import { Outlet } from "react-router-dom";
 import SideBar from "../pages/global/SideBar";
 import "./root-layout.css";
