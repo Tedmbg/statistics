@@ -23,8 +23,6 @@ import {
 import BarChart from "../../../components/BarChart"; // Import the BarChart component
 import DoughnutC from "../../../components/DoughnutC"; // Import your custom DoughnutC component
 
-
-
 // Register Chart.js components
 ChartJS.register(
   BarElement,
@@ -135,7 +133,7 @@ function RetentionRate() {
       title: { display: true, text: "Age Distribution" },
       tooltip: { enabled: true },
       legend: {
-        position: 'bottom',
+        position: "bottom",
       },
     },
     cutout: "70%",
@@ -158,7 +156,7 @@ function RetentionRate() {
       title: { display: true, text: "Work Status" },
       tooltip: { enabled: true },
       legend: {
-        position: 'bottom',
+        position: "bottom",
       },
     },
     cutout: "70%",
@@ -194,14 +192,31 @@ function RetentionRate() {
 
         {/* Second Card */}
         <Grid item xs={12} md={3}>
-          <Card sx={{ padding: "1.5rem", height: "15.75rem" }}>
-            <Typography variant="h6">Gender Ratio</Typography>
+          <Card
+            sx={{
+              padding: "1.5rem",
+              height: "15.75rem",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              backgroundColor: "#FFF",
+            }}
+          >
+            <Typography variant="h6" style={{ textAlign: "center" }}>
+              Gender Ratio
+            </Typography>
             <Box display="flex" justifyContent="space-between">
-              <Avatar sx={{ height: "3.75rem", width: "3.75rem" }}>👨</Avatar>
+              <img
+                src="/assets/male_avatar.png"
+                style={{ height: "50px", width: "50px" }}
+              />
               <Typography sx={{ fontSize: "1.575rem", mt: 1, pl: 1, pr: 0.1 }}>
                 40%
               </Typography>
-              <Avatar sx={{ height: "3.75rem", width: "3.75rem" }}>👩</Avatar>
+              <img
+                src="/assets/female_avatar.png"
+                style={{ height: "50px", width: "50px" }}
+              />
               <Typography sx={{ fontSize: "1.575rem", mt: 1, pl: 1 }}>
                 60%
               </Typography>
@@ -263,39 +278,16 @@ function RetentionRate() {
             data={retentionBarData}
             options={retentionBarOptions}
             title="Retention Rate"
-            height={"71.9895rem"} // Adjust height if needed
+            height={"31.9895rem"} // Adjust height if needed
           />
         </Grid>
-
-        {/* Age Distribution Donut Chart and Work Status Donut Chart */}
         <Grid item xs={12} md={4}>
-          <Card sx={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
-            <Typography variant="h6">Age Distribution</Typography>
-            <DoughnutC
-              data={ageDoughnutData}
-              options={ageDoughnutOptions}
-            />
-          </Card>
-
-          <Card sx={{ padding: "1.5rem" }}>
-            <Typography variant="h6">Work Status</Typography>
-            <DoughnutC
-              data={workStatusDoughnutData}
-              options={workStatusDoughnutOptions}
-            />
-          </Card>
-        </Grid>
-
-        {/* Discipleship Classes List */}
-        <Grid item xs={12}>
-          <Card sx={{ padding: "1.5rem" }}>
+          {/* Discipleship classes */}
+          <Card sx={{ padding: "1.5rem" ,backgroundColor:"#fff"}}>
             <Typography variant="h6">Discipleship Classes</Typography>
             <List>
               {discipleshipClasses.map((item, index) => (
-                <ListItem
-                  key={index}
-                  sx={{ paddingLeft: 0, paddingRight: 0 }}
-                >
+                <ListItem key={index} sx={{ paddingLeft: 0, paddingRight: 0 }}>
                   <ListItemAvatar>
                     <Avatar src={item.avatar} alt={item.leaderName} />
                   </ListItemAvatar>
@@ -314,10 +306,7 @@ function RetentionRate() {
                         <Typography variant="body2">
                           {item.leaderName}
                         </Typography>
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
+                        <Typography variant="body2" color="textSecondary">
                           {item.label}
                         </Typography>
                       </Box>
@@ -327,6 +316,31 @@ function RetentionRate() {
               ))}
             </List>
           </Card>
+        </Grid>
+
+     
+        {/* Age Distribution Donut Chart and Work Status Donut Chart */}
+        <Grid item xs={12} md={8}>
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
+              <Card sx={{ padding: "1rem", textAlign: "center", backgroundColor:"#FFF"}}>
+                <Typography variant="h6">Age Distribution</Typography>
+                <DoughnutC
+                  data={ageDoughnutData}
+                  options={ageDoughnutOptions}
+                />
+              </Card>
+            </Grid>
+            <Grid item xs={6}>
+              <Card sx={{ padding: "1rem", textAlign: "center",backgroundColor:"#fff" }}>
+                <Typography variant="h6">Work Status</Typography>
+                <DoughnutC
+                  data={workStatusDoughnutData}
+                  options={workStatusDoughnutOptions}
+                />
+              </Card>
+            </Grid>
+          </Grid>
         </Grid>
       </Grid>
     </Box>

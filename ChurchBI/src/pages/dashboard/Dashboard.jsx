@@ -44,6 +44,8 @@ export default function Dashboard() {
             value={year}
             onChange={(e) => setYear(e.target.value)}
             label="Year"
+            style={{backgroundColor:"white",border:"grey"
+            }}
           >
             <MenuItem value={2024}>2024</MenuItem>
             <MenuItem value={2023}>2023</MenuItem>
@@ -58,6 +60,8 @@ export default function Dashboard() {
             value={month}
             onChange={(e) => setMonth(e.target.value)}
             label="Month"
+            style={{backgroundColor:"white",border:"grey"
+            }}
           >
             <MenuItem value="January">January</MenuItem>
             <MenuItem value="February">February</MenuItem>

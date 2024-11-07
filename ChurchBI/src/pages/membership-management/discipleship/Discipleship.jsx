@@ -99,8 +99,9 @@ export default function Discipleship() {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label={generateClassName()}
+                label="ClassName"
                 variant="outlined"
+                defaultValue={generateClassName()}
                 sx={{
                   backgroundColor: "#FFFF",
                 }}
@@ -111,14 +112,11 @@ export default function Discipleship() {
                 fullWidth
                 label="Facilitator"
                 variant="outlined"
-                select
-                defaultValue="John Juma"
+                defaultValue="Name"
                 sx={{
                   backgroundColor: "#FFFF",
                 }}
               >
-                <MenuItem value="John Juma">John Juma</MenuItem>
-                <MenuItem value="Jane Doe">Jane Doe</MenuItem>
               </TextField>
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -197,7 +195,7 @@ export default function Discipleship() {
                 </InputAdornment>
               ),
             }}
-            sx={{ marginBottom: "1rem" }}
+            sx={{ marginBottom: "1rem" ,  backgroundColor:"#fff"}}
           />
 
           {/* Discipleship Classes List */}
@@ -225,11 +223,6 @@ export default function Discipleship() {
           </Card>
         </Grid>
       </Grid>
-
-      {/* Absentees List */}
-      <Box mt={4}>
-        <AbsenteeList />
-      </Box>
 
       {/* Charts Section */}
       <Grid container spacing={2} mt={2}>
@@ -267,6 +260,11 @@ export default function Discipleship() {
           </Box>
         </Grid>
       </Grid>
+
+         {/* Absentees List */}
+         <Box mt={4}>
+        <AbsenteeList />
+      </Box>
     </Box>
   );
 }
