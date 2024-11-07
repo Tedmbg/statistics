@@ -19,26 +19,50 @@ export default function Demographics() {
         
         <div style={{
           display:"flex",
-          width:"20rem",
-          height:"18rem",
+          flexWrap:"wrap",
           gap:"1em",
           border:"1px solid blue"
         }}>
-          <div>
+          <Box sx={{width:"15rem"}}>
             <DemographicCard data={sampleData.locationDistribution} title="Data"/>
-          </div>
-          <div>
+          </Box>
+          
+          <Box sx={{width:"15rem"}}>
             <DemographicCard data={sampleData.locationDistribution} title="Data"/>
-          </div>
+          </Box>
+
           </div>
 
-          <div style={{maxWidth:"42.5rem"}}>
+          <Box style={{maxWidth:"31rem"}}>
             <LineChart data={sampleData.membershipOverTime}/>
+          </Box>
+
+          <div style={{
+          display:"flex",
+          flexWrap:"wrap",
+          gap:"1em",
+          border:"1px solid blue"
+        }}>
+          <Box sx={{width:"15rem"}}>
+            <DemographicCard data={sampleData.locationDistribution} title="Data"/>
+          </Box>
+          
+          <Box sx={{width:"15rem"}}>
+            <DemographicCard data={sampleData.locationDistribution} title="Data"/>
+          </Box>
+
           </div>
+
+          
         </div>
 
         <div className="right-demo-content">
-          <DemographicCard data={sampleData.ageDistribution} title="Data"/>
+         <Box>
+         <DemographicCard data={sampleData.ageDistribution} title="Data"/>
+         </Box>
+         <Box>
+         <DemographicCard data={sampleData.ageDistribution} title="Data"/>
+         </Box>
           
         </div>
       </div>
