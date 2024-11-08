@@ -365,6 +365,22 @@ app.get('/api/baptisms/monthly', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+
+app.get('/api/members/residence3', async (req, res) => {
+    try {
+        const query = `
+            SELECT location AS residence, COUNT(*) ::INTEGER AS count
+            FROM members
+            GROUP BY location
+            LIMIT 3
+        `;
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+});
   
 
 // Start the server
