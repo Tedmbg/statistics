@@ -4,7 +4,7 @@ import { Bar } from "react-chartjs-2";
 
 const BarChart = ({ data, options, title, height = 545 }) => {
   return (
-    <Card sx={{ padding: "1.5rem" }}>
+    <Card sx={{ padding: "1.5rem" ,backgroundColor:"#fff"}}>
       {title && (
         <Typography variant="h6" gutterBottom>
           {title}
