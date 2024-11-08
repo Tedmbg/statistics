@@ -64,7 +64,7 @@ app.get('/api/members', async (req, res) => {
 app.get('/api/members/count', async (req, res) => {
     const { year, month } = req.query;
     try {
-        let query = 'SELECT COUNT(*) AS total_members FROM members';
+        let query = 'SELECT COUNT(*)::INTEGER AS total_members FROM members';
         let conditions = [];
         
         if (year) conditions.push(`EXTRACT(YEAR FROM membership_date) = ${year}`);
@@ -88,7 +88,7 @@ app.get('/api/members/count', async (req, res) => {
 app.get('/api/conversions/count', async (req, res) => {
     const { year, month } = req.query;
     try {
-        let query = "SELECT COUNT(*) AS total_conversions FROM members WHERE conversion_date IS NOT NULL";
+        let query = "SELECT COUNT(*)::INTEGER AS total_conversions FROM members WHERE conversion_date IS NOT NULL";
         let conditions = [];
 
         // Apply year filter if provided
@@ -114,7 +114,7 @@ app.get('/api/conversions/count', async (req, res) => {
 // Total Number of Ministries
 app.get('/api/ministries/count', async (req, res) => {
     try {
-        const result = await pool.query('SELECT COUNT(*) AS total_ministries FROM ministries');
+        const result = await pool.query('SELECT COUNT(*)::INTEGER AS total_ministries FROM ministries');
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err.message);
@@ -128,7 +128,7 @@ app.get('/api/ministries/count', async (req, res) => {
 app.get('/api/baptisms/count', async (req, res) => {
     const { year, month } = req.query;
     try {
-        let query = "SELECT COUNT(*) AS total_baptisms FROM members WHERE baptized = TRUE";
+        let query = "SELECT COUNT(*) ::INTEGER AS total_baptisms FROM members WHERE baptized = TRUE";
         let conditions = [];
 
         // Add year filter if provided, using membership_date instead
@@ -156,7 +156,7 @@ app.get('/api/baptisms/count', async (req, res) => {
 app.get('/api/discipleship_classes/completed/count', async (req, res) => {
     const { year, month } = req.query;
     try {
-        let query = "SELECT COUNT(*) AS completed_classes FROM discipleship_classes WHERE end_date IS NOT NULL";
+        let query = "SELECT COUNT(*) ::INTEGER AS completed_classes FROM discipleship_classes WHERE end_date IS NOT NULL";
         let conditions = [];
 
         // Add year filter if provided
@@ -183,7 +183,7 @@ app.get('/api/discipleship_classes/completed/count', async (req, res) => {
 app.get('/api/staff/count', async (req, res) => {
     const { year, month } = req.query;
     try {
-        let query = `SELECT COUNT(*) AS total_staff FROM users WHERE role IN ('Pastor', 'Admin', 'Leader')`;
+        let query = `SELECT COUNT(*)::INTEGER AS total_staff FROM users WHERE role IN ('Pastor', 'Admin', 'Leader')`;
         let conditions = [];
 
         if (year) conditions.push(`EXTRACT(YEAR FROM date_created) = ${year}`);
@@ -216,7 +216,7 @@ app.get('/api/members/age-distribution', async (req, res) => {
                     WHEN DATE_PART('year', AGE(date_of_birth)) >= 50 THEN '50+'
                     ELSE 'Unknown'
                 END AS age_range,
-                COUNT(*) AS count
+                COUNT(*) ::INTEGER AS count
             FROM members
             GROUP BY age_range
         `;
@@ -232,7 +232,7 @@ app.get('/api/members/age-distribution', async (req, res) => {
 app.get('/api/members/work-status', async (req, res) => {
     try {
         const query = `
-            SELECT occupation_status, COUNT(*) AS count
+            SELECT occupation_status, COUNT(*)::INTEGER AS count
             FROM members
             GROUP BY occupation_status
         `;
@@ -247,7 +247,7 @@ app.get('/api/members/work-status', async (req, res) => {
 app.get('/api/members/gender-distribution', async (req, res) => {
     try {
         const query = `
-            SELECT gender, COUNT(*) AS count
+            SELECT gender, COUNT(*) ::INTEGER AS count
             FROM members
             GROUP BY gender
         `;
@@ -265,7 +265,7 @@ app.get('/api/members/marital-status', async (req, res) => {
         const query = `
             SELECT 
                 married_status,
-                COUNT(*) AS count
+                COUNT(*)::INTEGER AS count
             FROM members
             GROUP BY married_status
         `;
@@ -281,7 +281,7 @@ app.get('/api/members/marital-status', async (req, res) => {
 app.get('/api/members/residence', async (req, res) => {
     try {
         const query = `
-            SELECT location AS residence, COUNT(*) AS count
+            SELECT location AS residence, COUNT(*) ::INTEGER AS count
             FROM members
             GROUP BY location
         `;
@@ -296,7 +296,7 @@ app.get('/api/members/residence', async (req, res) => {
 app.get('/api/members/county-origin', async (req, res) => {
     try {
         const query = `
-            SELECT county_of_origin, COUNT(*) AS count
+            SELECT county_of_origin, COUNT(*)::INTEGER AS count
             FROM members
             GROUP BY county_of_origin
         `;
@@ -321,7 +321,7 @@ app.get('/api/members/monthly', async (req, res) => {
             SELECT 
                 TO_CHAR(membership_date, 'Mon') AS month,
                 EXTRACT(MONTH FROM membership_date) AS month_number,
-                COUNT(*) AS count
+                COUNT(*)::INTEGER AS count
             FROM members
             WHERE EXTRACT(YEAR FROM membership_date) = $1
             GROUP BY month, month_number
@@ -343,7 +343,7 @@ app.get('/api/baptisms/monthly', async (req, res) => {
             SELECT 
                 TO_CHAR(conversion_date, 'Mon') AS month,
                 EXTRACT(MONTH FROM conversion_date) AS month_number,
-                COUNT(*) AS count
+                COUNT(*) ::INTEGER AS count
             FROM members
             WHERE baptized = TRUE
         `;
