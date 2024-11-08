@@ -13,12 +13,12 @@ export const useDashboardData = () => {
   const fetchData = async () => {
     try {
       const [membersRes, conversionsRes, ministriesRes, baptismsRes, discipleshipRes, staffRes] = await Promise.all([
-        fetch('/api/members/count').then((res) => res.json()),
-        fetch('/api/conversions/count').then((res) => res.json()),
-        fetch('/api/ministries/count').then((res) => res.json()),
-        fetch('/api/baptisms/count').then((res) => res.json()),
-        fetch('/api/discipleship_classes/completed/count').then((res) => res.json()),
-        fetch('/api/staff/count').then((res) => res.json()),
+        fetch('https://statistics-production-032c.up.railway.app/api/members/count').then((res) => res.json()),
+        fetch('https://statistics-production-032c.up.railway.app/api/conversions/count').then((res) => res.json()),
+        fetch('https://statistics-production-032c.up.railway.app/api/ministries/count').then((res) => res.json()),
+        fetch('https://statistics-production-032c.up.railway.app/api/baptisms/count').then((res) => res.json()),
+        fetch('https://statistics-production-032c.up.railway.app/api/discipleship_classes/completed/count').then((res) => res.json()),
+        fetch('https://statistics-production-032c.up.railway.app/api/staff/count').then((res) => res.json()),
       ]);
 
       setData({
