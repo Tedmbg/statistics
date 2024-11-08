@@ -9,8 +9,8 @@
 }
 
 .demographic-container {
-  display:flex;
-  gap: 2em;
+ display: grid;
+ gap: 2rem;
   
 }
 
@@ -19,6 +19,8 @@
     flex-direction: column;
     gap: 1em;
 }
+
+
 
 @media (max-width: 1000px) {
   .demographic-container {
