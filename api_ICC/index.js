@@ -264,13 +264,10 @@ app.get('/api/members/marital-status', async (req, res) => {
     try {
         const query = `
             SELECT 
-                CASE 
-                    WHEN married_status = TRUE THEN 'Married'
-                    ELSE 'Single'
-                END AS marital_status,
+                married_status,
                 COUNT(*) AS count
             FROM members
-            GROUP BY marital_status
+            GROUP BY married_status
         `;
         const result = await pool.query(query);
         res.json(result.rows);
@@ -279,6 +276,7 @@ app.get('/api/members/marital-status', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+
 
 app.get('/api/members/residence', async (req, res) => {
     try {
@@ -367,10 +365,6 @@ app.get('/api/baptisms/monthly', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
-
-
-
-
   
 
 // Start the server
