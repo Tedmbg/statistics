@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const { Pool } = require('pg');
+const cors = require('cors')
 
 
 // Load environment variables
@@ -8,6 +9,13 @@ dotenv.config();
 
 // Initialize Express
 const app = express();
+
+
+
+app.use(cors({
+    origin: ['http://localhost:5173', 'https://statistics-production-032c.up.railway.app'], 
+    methods: 'GET,POST', 
+}));
 
 // Middleware to parse JSON
 app.use(express.json());
@@ -330,6 +338,35 @@ app.get('/api/members/monthly', async (req, res) => {
 });
 
 
+app.get('/api/baptisms/monthly', async (req, res) => {
+    const { year } = req.query;
+    try {
+        let query = `
+            SELECT 
+                TO_CHAR(conversion_date, 'Mon') AS month,
+                EXTRACT(MONTH FROM conversion_date) AS month_number,
+                COUNT(*) AS count
+            FROM members
+            WHERE baptized = TRUE
+        `;
+
+        // Add the year condition 
+        if (year) {
+            query += ` AND EXTRACT(YEAR FROM conversion_date) = ${year}`;
+        }
+
+        query += `
+            GROUP BY month, month_number
+            ORDER BY month_number
+        `;
+
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+});
 
 
 

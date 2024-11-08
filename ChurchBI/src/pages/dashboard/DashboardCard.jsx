@@ -1,12 +1,53 @@
 import { Box, Paper, Typography } from "@mui/material";
-import dashboardData from './dashboard.json'; // Import the JSON data
-import { useState,useEffect } from "react";
+import {useDashboardData} from './dashboardData';
+
+
+
 
 function DashboardCard() {
+  const { members, conversions, ministries, baptisms, discipleshipClasses, staff } = useDashboardData();
+  const datas=[
+    {
+      "id": 1,
+      "icon": "/assets/congregation.png",
+      "title": "Total Number Of Members",
+      "value":members?.total_members ||0
+    },
+    {
+      "id": 2,
+      "icon": "/assets/conversions.png",
+      "title": "Total Number Of Conversions",
+      "value": conversions?.total_conversions ||0
+    },
+    {
+      "id": 3,
+      "icon": "/assets/ministry.png",
+      "title": "Total Number Of Ministries",
+      "value": ministries?.total_ministries ||0
+    },
+    {
+      "id": 4,
+      "icon": "/assets/baptism.png",
+      "title": "Total Number of Baptisms",
+      "value": baptisms?.total_baptisms ||0
+    },
+    {
+      "id": 5,
+      "icon": "/assets/dicsipleship.png",
+      "title": "Discipleship Classes Completed",
+      "value": discipleshipClasses?.completed_classes ||0
+    },
+    {
+      "id": 6,
+      "icon": "/assets/staff.png",
+      "title": "Church Staff",
+      "value": staff?.total_staff||0
+    }
+  ]
   return (
     <Box
       sx={{
-        display: 'flex',
+        display:'flex',
         flexDirection:'row',
         gap:9,
         mt:6,
@@ -22,8 +63,7 @@ function DashboardCard() {
           backgroundColor: "#FFFFFF",
         },
       }}
-    >
-      {dashboardData.map((item) => (
+    >{datas.map((item) => (
         <Paper
           key={item.id}
           sx={{
