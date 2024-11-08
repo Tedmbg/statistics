@@ -5,8 +5,11 @@ import BarChart from "../../../components/BarChart";
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 
 import CardThreeRow from "../../../components/CardThreeRow";
+import { useEffect, useState } from "react";
 
 // member data 
+
+// /api/baptisms/count
 const baptisData = [
   { month: "Jan", male: 10, female: 20 },
   { month: "Feb", male: 15, female: 10 },
@@ -37,6 +40,13 @@ const barOptions = {
 };
 
 function Baptism() {
+  const [baptismCount,setBaptismCount]=useState(null)
+  useEffect(()=>{
+    fetch("https://statistics-production-032c.up.railway.app/api/baptisms/count")
+      .then(res=>res.json())
+      .then(data=>setBaptismCount(data.total_baptisms))
+  },[])
+
   const theme = useTheme(); // Note the parentheses here to call the hook
 
   const baptismBarData = {
@@ -94,7 +104,7 @@ function Baptism() {
             // marginTop:"1em",
           }}
         >
-          <CardThreeRow text="Total Members" number={12} />
+          <CardThreeRow text="Total Members" number={baptismCount||0} />
 
           <div>
             <Button
