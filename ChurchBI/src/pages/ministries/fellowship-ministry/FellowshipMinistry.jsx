@@ -1,55 +1,50 @@
 import { Box, Card, Typography, Grid, Avatar } from "@mui/material";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from "recharts";
+import BarChart from "../../../components/BarChart";
 import DoughnutC from "../../../components/DoughnutC";
-// import sampleData from '../../membership-management/demographics/demodata';
-
-
-
-const   ageDistribution = {
-  labels: ["18 - 25", "26 - 35", "36 - 45", "46+"],
-  datasets: [
-    {
-      data: [25, 30, 20, 25],
-      backgroundColor: ["#f8766d", "#7bbf5e", "#f0a500", "#b4b7c6"]
-    }
-  ]
-}
-const   workStatus = {
-  labels: ["Employed", "Unemployed"],
-  datasets: [
-    {
-      data: [80, 20],
-      backgroundColor: ["#6c8ef2", "#8d78eb"]
-    }
-  ]
-}
-const workStatusData = [
-  { name: "Employed", value: 80 },
-  { name: "Unemployed", value: 20 },
-];
-const ministryGrowthData = [
-  { ministry: "Yth wrsh", members: 10 },
-  { ministry: "Yth pry", members: 0 },
-  { ministry: "Trf Hc", members: 20 },
-  { ministry: "ush", members: 30 },
-  { ministry: "Tns", members: 25 },
-  { ministry: "Hsp", members: 15 },
-];
+import serviceMinistries from "../../../data/serviceMinistries.json";
+import ageData from "../../../data/ageServiceMinistry.json";
+import workStatusData from "../../../data/workStatusService.json";
 
 function FellowshipMinistry() {
-  // console.log(sampleData);
+  const barChartData = {
+    labels: [
+      "Ushering",
+      "Counselling",
+      "Teens",
+      "Media/Sound",
+      "Traffic"
+    ],
+    datasets: [
+      {
+        label: "Male",
+        data: [10, 20, 15, 25, 20, 30, 20, 25, 15, 18, 22, 19],
+        backgroundColor: "#4e79a7",
+      },
+      {
+        label: "Female",
+        data: [15, 10, 18, 17, 10, 8, 15, 12, 10, 14, 16, 13],
+        backgroundColor: "#a0cbe8",
+      },
+    ],
+  };
+
+  const barChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false, // Allow the chart to fill its container
+    scales: {
+      x: { stacked: true },
+      y: {
+        stacked: true,
+        beginAtZero: true,
+        title: { display: true, text: "No of Members" },
+      },
+    },
+  };
   return (
 
     <Box sx={{ padding: "2rem" }}>
       <Typography variant="h4" fontWeight="bold" gutterBottom>
-        Fellowship Activity Overview
+        Overview
       </Typography>
 
       <Grid container spacing={2}>
@@ -60,13 +55,21 @@ function FellowshipMinistry() {
               padding: "1.5rem",
               backgroundColor: "#2B3868",
               color: "#fff",
-              height: "8.75rem",
+              height: "15.75rem",
               textAlign: "center",
+              display:"flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
             }}
           >
-            <Typography variant="h6">Total Number of Ministries</Typography>
-            <Typography variant="h3">13</Typography>
+            <img src="assets/total members.png" alt="Total Members" />
+            <Typography variant="h6">
+            Total Number of Ministries
+            </Typography>
+            <Typography variant="h3">120</Typography>
           </Card>
+       
         </Grid>
 
         <Grid item xs={12} md={3} sx={{ marginRight: '8rem' }}>
@@ -75,93 +78,106 @@ function FellowshipMinistry() {
               padding: "1.5rem",
               backgroundColor: "#27733a",
               color: "#fff",
-              height: "8.75rem",
-              textAlign: "center",
+              height: "15.75rem",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
             }}
           >
+             <img src="/assets/volunteer 1.png" alt="Volunteer" />
             <Typography variant="h6">Total Number of Meetings</Typography>
             <Typography variant="h3">21</Typography>
           </Card>
         </Grid>
 
         <Grid item xs={12} md={3}>
-          <Card
+        <Card
             sx={{
               padding: "1.5rem",
               backgroundColor: "#2B3868",
               color: "#fff",
-              height: "8.75rem",
-              textAlign: "center",
+              height: "15.75rem",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
             }}
           >
-            <Typography variant="h6">Average Growth</Typography>
+            <img src="/assets/retationrate.png" alt="Retention Rate" />
+            <Typography variant="h6">Average growth </Typography>
             <Typography variant="h3">17%</Typography>
           </Card>
         </Grid>
 
 
-
+</Grid>
         {/* Ministry Growth Chart */}
-        <Grid item xs={12} md={8}>
-          <Card sx={{ padding: "1.5rem" }}>
-            <Typography variant="h6">Ministry Growth</Typography>
-            <ResponsiveContainer width="100%" height={500}>
-              <BarChart data={ministryGrowthData}>
-                <XAxis dataKey="ministry" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="members" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        </Grid>
+        <Grid marginTop={6} marginBottom={6}>
+        <Card sx={{ height: 630}}>
+        <BarChart
+              data={barChartData}
+              options={barChartOptions}
+              title="Number of Members"
+            />
+            </Card>
+            </Grid>
+  
 
         {/* Sidebar: Age and Work Status Pie Charts */}
-        <Grid item xs={12} md={4}>
-          <Card sx={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
-            <Typography variant="h6">Age</Typography>
-            <DoughnutC data = {ageDistribution} />                
-          </Card>
 
-          <Card sx={{ padding: "1.5rem" }}>
-            <Typography variant="h6">Work Status</Typography>
-            <DoughnutC data = {workStatus} /> 
-          </Card>
+        <Grid container spacing={2}>
+        {/* Left Section - Donut Charts */}
+        <Grid item xs={12} md={8}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <Card sx={{ padding: "1rem", backgroundColor: "#FFF" }}>
+                <Typography variant="h6" textAlign="center">
+                  Age
+                </Typography>
+                <DoughnutC data={ageData} />
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Card sx={{ padding: "1rem", backgroundColor: "#FFF" }}>
+                <Typography variant="h6" textAlign="center">
+                  Work Status
+                </Typography>
+                <DoughnutC data={workStatusData} />
+              </Card>
+            </Grid>
+          </Grid>
         </Grid>
-          
-        {/* Fellowship Ministries List */}
-        <Grid item xs={12}>
-          <Card sx={{ padding: "1.5rem" }}>
-            <Typography variant="h6">Fellowship Ministries</Typography>
-            <Box sx={{ marginTop: "1rem" }}>
-              {[
-                { name: "Ushering", leader: "John Kimani" },
-                { name: "Counselling", leader: "Lady John" },
-                { name: "Teens", leader: "Zack Chesoni" },
-                { name: "Media/Sound", leader: "Shem Mustafa" },
-                { name: "Traffic", leader: "Jane Rotich" },
-              ].map((ministry, index) => (
-                <Box
-                  key={index}
-                  display="flex"
-                  alignItems="center"
-                  marginBottom="1rem"
+
+        {/* Right Section - Service Ministries */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ padding: "1rem", backgroundColor: "#FFF" }}>
+            <Typography variant="h6" fontWeight="bold" gutterBottom>
+              Fellowship Ministries
+            </Typography>
+            {serviceMinistries.map((ministry, index) => (
+              <Box key={index} display="flex" alignItems="center" mb={2}>
+                <Avatar
+                  sx={{ width: 36, height: 36, bgcolor: "#e0e0e0", mr: 1 }}
                 >
-                  <Avatar sx={{ marginRight: "1rem" }} src="path/to/avatar.jpg" />
-                  <Box>
-                    <Typography>{ministry.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Leader: {ministry.leader}
-                    </Typography>
-                  </Box>
+                  {/* Replace with an image source if available */}
+                </Avatar>
+                <Box>
+                  <Typography variant="body1" fontWeight="bold">
+                    {ministry.name}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    {ministry.leader} - {ministry.label}
+                  </Typography>
                 </Box>
-              ))}
-            </Box>
+              </Box>
+            ))}
           </Card>
         </Grid>
       </Grid>
     </Box>
   );
 }
+
 
 export default FellowshipMinistry;
