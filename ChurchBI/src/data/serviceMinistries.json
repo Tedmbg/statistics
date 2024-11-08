@@ -1,5 +1,9 @@
 [
-    { "name": "Ushering", "leader": "John kimani", "label": "mb .52", "avatar": "path/to/avatar1.jpg" },
+    { "name": "Ushering", 
+    "leader": "John kimani", 
+    "label": "mb .52",
+    "avatar": "path/to/avatar1.jpg"
+   },
     { "name": "Counselling", "leader": "Lady john", "label": "mb .18", "avatar": "path/to/avatar2.jpg" },
     { "name": "Teens", "leader": "Zack Chesoni", "label": "mb .22", "avatar": "path/to/avatar3.jpg" },
     { "name": "Media/sound", "leader": "Shem mustafa", "label": "mb .42", "avatar": "path/to/avatar4.jpg" },

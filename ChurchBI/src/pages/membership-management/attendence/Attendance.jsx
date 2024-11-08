@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const AttendanceTracker = () => {
   const styles = {
@@ -13,11 +13,18 @@ const AttendanceTracker = () => {
       padding: '24px',
       backgroundColor: '#f7f7f7',
       borderBottom: '1px solid #e5e7eb',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
     },
     headerTitle: {
       fontSize: '24px',
       fontWeight: 'bold',
       color: '#333',
+    },
+    headerDate: {
+      fontSize: '18px',
+      color: '#555',
     },
     content: {
       padding: '24px',
@@ -111,9 +118,21 @@ const AttendanceTracker = () => {
     { id: 19, name: "Rachei Odnie", status: null },
     { id: 20, name: "Siend Frow", status: null },
     { id: 21, name: "Wonf Dropse", status: null }
+    // ... more students
   ];
 
   const [students, setStudents] = useState(initialStudents);
+  const [currentDate, setCurrentDate] = useState("");
+
+  useEffect(() => {
+    const today = new Date();
+    const formattedDate = today.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    setCurrentDate(formattedDate);
+  }, []);
 
   const markAttendance = (studentId, status) => {
     setStudents(students.map(student => {
@@ -166,6 +185,7 @@ const AttendanceTracker = () => {
       <div style={styles.container}>
         <div style={styles.header}>
           <h2 style={styles.headerTitle}>Class 1 Attendance</h2>
+          <span style={styles.headerDate}>{currentDate}</span>
         </div>
         
         <div style={styles.content}>
