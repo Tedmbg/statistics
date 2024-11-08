@@ -207,6 +207,7 @@ app.get('/api/members/age-distribution', async (req, res) => {
         const query = `
             SELECT
                 CASE
+                    WHEN DATE_PART('year', AGE(date_of_birth)) = 0 AND DATE_PART('month', AGE(date_of_birth)) BETWEEN 1 AND 11 THEN '1-11 M'
                     WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 1 AND 5 THEN '1-5' 
                     WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 6 AND 10 THEN '6-10'
                     WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 11 AND 17 THEN '11-17'
@@ -381,6 +382,9 @@ app.get('/api/members/residence3', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+
+
+  
   
 
 // Start the server
