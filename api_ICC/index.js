@@ -373,7 +373,7 @@ app.get('/api/members/residence3', async (req, res) => {
             SELECT location AS residence, COUNT(*) ::INTEGER AS count
             FROM members
             GROUP BY location
-            LIMIT 3
+            LIMIT 6
         `;
         const result = await pool.query(query);
         res.json(result.rows);
