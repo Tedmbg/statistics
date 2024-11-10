@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ChevronDown, Search, UserPlus, Pencil, ArrowLeft } from 'lucide-react'
+import { ChevronDown, Search, UserPlus, Pencil, ArrowLeft, Trash2 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +42,12 @@ export default function MemberManagement() {
   const [showAddMemberForm, setShowAddMemberForm] = useState(false)
   const [editingMember, setEditingMember] = useState(null)
   const [memberToDelete, setMemberToDelete] = useState(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [updatedMembers, setUpdatedMembers] = useState(new Set());
+  const [hoveredRow, setHoveredRow] = useState(null);
+
+
+
 
   const filteredMembers = members.filter(member => 
     member.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -50,12 +56,44 @@ export default function MemberManagement() {
   const handleRoleChange = (memberId, newRole) => {
     setMembers(members.map(member => 
       member.id === memberId ? { ...member, role: newRole } : member
-    ))
-  }
+    ));
+  
+    // Track updated members
+    setUpdatedMembers((prev) => {
+      const updatedSet = new Set(prev);
+      updatedSet.add(memberId);
+      return updatedSet;
+    });
+  
+    setHasUnsavedChanges(true); // Mark as having unsaved changes
+  };
+  
+  
+  
   const handleEditMember = (member) => {
     setEditingMember(member)
     setShowAddMemberForm(true)
   }
+
+ const handleCancelChange = (memberId) => {
+  // Revert the member's role to its original state
+  setMembers(members.map(member => 
+    member.id === memberId ? { ...member, role: initialMembers.find(m => m.id === memberId).role } : member
+  ));
+
+  // Remove the member from updatedMembers
+  setUpdatedMembers((prev) => {
+    const updatedSet = new Set(prev);
+    updatedSet.delete(memberId);
+    return updatedSet;
+  });
+
+  // Check if there are remaining unsaved changes
+  setHasUnsavedChanges(updatedMembers.size > 1);
+};
+
+  
+  
 
 
   const handleDeleteMember = (member) => {
@@ -129,38 +167,76 @@ export default function MemberManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredMembers.map((member) => (
-              <TableRow key={member.id}>
-                <TableCell>{member.name}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="w-40 justify-between">
-                        {member.role} <ChevronDown className="h-4 w-4 opacity-50" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      {roles.map((role) => (
-                        <DropdownMenuItem 
-                          key={role}
-                          onClick={() => handleRoleChange(member.id, role)}
-                        >
-                          {role}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-                <TableCell>
-                  <Button variant="ghost" onClick={() => handleEditMember(member)}>
-                    <Pencil className="h-4 w-4 text-blue-500" />
-                  </Button>
-                </TableCell>
-              </TableRow>
+  {filteredMembers.map((member) => (
+    <TableRow
+      key={member.id}
+      className={updatedMembers.has(member.id) ? "bg-yellow-100" : ""}
+      onMouseEnter={() => setHoveredRow(member.id)}
+      onMouseLeave={() => setHoveredRow(null)}
+    >
+      <TableCell>{member.name}</TableCell>
+      <TableCell className="flex items-center space-x-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-40 justify-between">
+              {member.role} <ChevronDown className="h-4 w-4 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {roles.map((role) => (
+              <DropdownMenuItem
+                key={role}
+                onClick={() => handleRoleChange(member.id, role)}
+              >
+                {role}
+              </DropdownMenuItem>
             ))}
-          </TableBody>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {updatedMembers.has(member.id) && hoveredRow === member.id && (
+          <Button
+            variant="ghost"
+            onClick={() => handleCancelChange(member.id)}
+            sx={{
+              marginBottom: '1rem',
+              marginLeft: { xs: 'auto', sm: 'auto', md: '96rem' },
+            }}
+          >
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </Button>
+        )}
+      </TableCell>
+      <TableCell>
+        <Button variant="ghost" onClick={() => handleEditMember(member)}>
+          <Pencil className="h-4 w-4 text-blue-500" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  ))}
+</TableBody>
+
+
+
+
         </Table>
       </div>
+     {hasUnsavedChanges && updatedMembers.size > 0 && (
+  <div className="fixed bottom-4 right-12">
+    <Button 
+      className="bg-blue-500 text-white px-6 py-2 rounded-lg shadow-lg hover:bg-blue-600"
+      onClick={() => {
+        // Placeholder for backend submission logic
+        console.log('Submit changes:', members);
+        setHasUnsavedChanges(false); // Reset unsaved changes after submission
+        setUpdatedMembers(new Set()); // Clear updated members
+      }}
+    >
+      Submit
+    </Button>
+  </div>
+)}
+
+
 
       <AlertDialog open={!!memberToDelete} onOpenChange={() => setMemberToDelete(null)}>
         <AlertDialogContent>
