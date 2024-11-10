@@ -10,8 +10,14 @@ import { useState, useEffect } from "react"
 import { fetchDemographicData } from "./demographicData"
 
 const styles={
-  
-  height:"20rem",
+  width:"18rem",
+  widtd:"25rem",
+ 
+}
+const titleStyles={
+  fontSize:"1.5rem",
+  color:"black",
+  padding:"0 0 1rem 1rem"
 }
 
 export default function Demographics() { 
@@ -44,20 +50,22 @@ export default function Demographics() {
         
             <div style={{
               display:"flex",
-              flexWrap:"wrap",
-              justifyContent:"space-between",
+              // flexWrap:"wrap",
               gap:"1em",
             }}>
-              <Box sx={styles}>
-                <DemographicCard data={demographicData.ageDistribution} title="Age"/>
-              </Box>
 
-              <Box sx={styles}>
-                <DemographicCard data={demographicData.genderDistribution} title="Gender"/>
-              </Box>
-              <Box sx={styles}>
-                <DemographicCard data={demographicData.marriage} title="Marriage"/>
-              </Box>
+              <div className="shape-container">
+                  <h1 style={titleStyles} >Age</h1>
+                  <DoughnutC data={demographicData.ageDistribution}/>
+              </div>
+              <div className="shape-container">
+                  <h1 style={titleStyles} >Gender</h1>
+                  <DoughnutC data={demographicData.genderDistribution}/>
+              </div>
+              <div className="shape-container">
+                  <h1 style={titleStyles} >Marriage</h1>
+                  <DoughnutC data={demographicData.marriage}/>
+              </div>
               </div>
 
           <Box >

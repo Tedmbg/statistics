@@ -12,7 +12,9 @@
     overflow-y: scroll;
     background-color: #070000;
   }
-  
+  .sidebar-content{
+    display: none;
+  }
   .main-content {
     height: 100vh;
     overflow-y: auto;
