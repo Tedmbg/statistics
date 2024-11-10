@@ -1,4 +1,3 @@
-
 import { Box, Grid, Card, Typography, Avatar } from "@mui/material";
 import BarChart from "../../../components/BarChart";
 import DoughnutC from "../../../components/DoughnutC";
@@ -28,7 +27,7 @@ export default function Dashboard() {
               color: "#fff",
               height: "15.75rem",
               textAlign: "center",
-              display:"flex",
+              display: "flex",
               flexDirection: "column",
               justifyContent: "center",
               alignItems: "center",
@@ -49,26 +48,33 @@ export default function Dashboard() {
             sx={{
               padding: "1.5rem",
               height: "15.75rem",
-              display:"flex",
+              display: "flex",
               flexDirection: "column",
               justifyContent: "center",
-              alignItems: "center",
+              backgroundColor: "#FFF",
             }}
           >
-            <Typography variant="h6">Gender Ratio</Typography>
+            <Typography variant="h6" style={{ textAlign: "center" }}>
+              Gender Ratio
+            </Typography>
             <Box display="flex" justifyContent="space-between">
-              <Avatar sx={{ height: "3.75rem", width: "3.75rem" }}>👨</Avatar>
+              <img
+                src="/assets/male_avatar.png"
+                style={{ height: "50px", width: "50px" }}
+              />
               <Typography sx={{ fontSize: "1.575rem", mt: 1, pl: 1, pr: 0.1 }}>
                 40%
               </Typography>
-              <Avatar sx={{ height: "3.75rem", width: "3.75rem" }}>👩</Avatar>
+              <img
+                src="/assets/female_avatar.png"
+                style={{ height: "50px", width: "50px" }}
+              />
               <Typography sx={{ fontSize: "1.575rem", mt: 1, pl: 1 }}>
                 60%
               </Typography>
             </Box>
           </Card>
         </Grid>
-
         {/* Third Card */}
         <Grid item xs={12} md={3}>
           <Card
@@ -113,15 +119,49 @@ export default function Dashboard() {
       </Grid>
 
       {/* Attendance Bar Chart */}
-      <Box mb={3} height={800}>
-        <Typography variant="h6" mb={1}>
-          Attendance
-        </Typography>
-        <BarChart
-          data={attendanceData}
-          options={{ responsive: true, scales: { y: { beginAtZero: true } } }}
-          height={700}
-        />
+      <Box mb={3} height={800} sx={{ display: "flex", gap: 3 ,backgroundColor:"#fff", marginTop:"1.5rem" }}>
+        {/* Left Side: Attendance and Bar Chart */}
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="h6" mb={1}>
+            Attendance
+          </Typography>
+          <BarChart
+            data={attendanceData}
+            options={{
+              responsive: true,
+              scales: {
+                x: { stacked: true }, // Enable stacking on the x-axis
+                y: {
+                  stacked: true, // Enable stacking on the y-axis
+                  beginAtZero: true,
+                },
+              },
+            }}
+            height={700}
+          />
+        </Box>
+
+        {/* Right Side: Service Ministries Card */}
+        <Card sx={{ flex: "0.4", padding: "1rem", backgroundColor: "#FFF" ,marginTop:"2.5rem" , height:"46.875rem"}}>
+          <Typography variant="h6" fontWeight="bold" gutterBottom>
+            Service Ministries
+          </Typography>
+          {serviceMinistries.map((ministry, index) => (
+            <Box key={index} display="flex" alignItems="center" mb={2}>
+              <Avatar sx={{ width: 36, height: 36, bgcolor: "#e0e0e0", mr: 1 }}>
+                {/* Add an icon or image if needed */}
+              </Avatar>
+              <Box>
+                <Typography variant="body1" fontWeight="bold">
+                  {ministry.name}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {ministry.leader} - {ministry.label}
+                </Typography>
+              </Box>
+            </Box>
+          ))}
+        </Card>
       </Box>
 
       <Grid container spacing={2}>
@@ -145,32 +185,6 @@ export default function Dashboard() {
               </Card>
             </Grid>
           </Grid>
-        </Grid>
-
-        {/* Right Section - Service Ministries */}
-        <Grid item xs={12} md={4}>
-          <Card sx={{ padding: "1rem", backgroundColor: "#FFF" }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Service Ministries
-            </Typography>
-            {serviceMinistries.map((ministry, index) => (
-              <Box key={index} display="flex" alignItems="center" mb={2}>
-                <Avatar
-                  sx={{ width: 36, height: 36, bgcolor: "#e0e0e0", mr: 1 }}
-                >
-                  {/* Replace with an image source if available */}
-                </Avatar>
-                <Box>
-                  <Typography variant="body1" fontWeight="bold">
-                    {ministry.name}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    {ministry.leader} - {ministry.label}
-                  </Typography>
-                </Box>
-              </Box>
-            ))}
-          </Card>
         </Grid>
       </Grid>
     </Box>
