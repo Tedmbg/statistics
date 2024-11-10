@@ -90,14 +90,46 @@ function AddMemberForm({ initialData }) {
                   <TextField fullWidth label="County of Origin" variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }} />
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
-                    <InputLabel>Occupation Status</InputLabel>
-                    <Select label="Occupation Status">
-                      <MenuItem value="Employed">Employed</MenuItem>
-                      <MenuItem value="Unemployed">Unemployed</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
+  <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
+    <InputLabel>Occupation</InputLabel>
+    <Select label="Occupation">
+      {/* General Status */}
+     
+     
+
+      {/* Engineering and Technical Fields */}
+      <MenuItem value="Engineering and Technical">Engineering and Technical</MenuItem>
+
+      {/* Medical and Healthcare */}
+      <MenuItem value="Medical and Healthcare">Medical and Healthcare</MenuItem>
+
+      {/* Education */}
+      <MenuItem value="Education">Education</MenuItem>
+
+      {/* Business and Management */}
+      <MenuItem value="Business and Management">Business and Management</MenuItem>
+
+      {/* Information Technology */}
+      <MenuItem value="Information Technology">Information Technology</MenuItem>
+
+      {/* Creative Arts */}
+      <MenuItem value="Creative Arts">Creative Arts</MenuItem>
+
+      {/* Trades and Crafts */}
+      <MenuItem value="Trades and Crafts">Trades and Crafts</MenuItem>
+
+      {/* Government and Law */}
+      <MenuItem value="Government and Law">Government and Law</MenuItem>
+
+      {/* Others */}
+      <MenuItem value="Student">Student</MenuItem>
+      <MenuItem value="Retired">Retired</MenuItem>
+      <MenuItem value="Unemployed">Unemployed</MenuItem>
+      <MenuItem value="Other">Other</MenuItem>
+    </Select>
+  </FormControl>
+</Grid>
+
                 <Grid item xs={12} md={4}>
                   <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
                     <InputLabel>Marriage Status</InputLabel>
