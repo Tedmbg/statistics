@@ -10,7 +10,7 @@ import { useState, useEffect } from "react"
 import { fetchDemographicData } from "./demographicData"
 
 const styles={
-  flexGrow:"1",
+  
   height:"20rem",
 }
 
