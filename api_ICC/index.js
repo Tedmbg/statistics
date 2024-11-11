@@ -343,8 +343,10 @@ app.get('/api/baptisms/monthly', async (req, res) => {
         let query = `
             SELECT 
                 TO_CHAR(conversion_date, 'Mon') AS month,
-                EXTRACT(MONTH FROM conversion_date) AS month_number,
-                COUNT(*) ::INTEGER AS count
+                EXTRACT(MONTH FROM conversion_date) ::INTEGER  AS month_number,
+                COUNT(*) ::INTEGER AS count,
+                COUNT(CASE WHEN gender = 'Male' THEN 1 END) ::INTEGER AS male_count,
+                COUNT(CASE WHEN gender = 'Female' THEN 1 END) ::INTEGER AS female_count
             FROM members
             WHERE baptized = TRUE
         `;
@@ -360,7 +362,16 @@ app.get('/api/baptisms/monthly', async (req, res) => {
         `;
 
         const result = await pool.query(query);
-        res.json(result.rows);
+        // Format the result to match your desired output
+        const formattedResult = result.rows.map(row => ({
+            month: row.month,
+            month_number: row.month_number,
+            count: row.count,
+            male_count: row.male_count,
+            female_count: row.female_count
+        }));
+
+        res.json(formattedResult);
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server Error');
@@ -501,6 +512,7 @@ app.post('/api/members/add', async (req, res) => {
         res.status(500).json({ error: 'Failed to add member' });
     }
 });
+
 
 
 
