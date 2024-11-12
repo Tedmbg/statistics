@@ -136,12 +136,15 @@ function RetentionRate() {
               backgroundColor: "#2B3868",
               color: "#fff",
               height: "15.75rem",
-              textAlign: "center",
+              display: "flex",
+              justifyContent: "center",
+              flexDirection:"column",
+              alignItems:"center"
             }}
           >
             {/* Replace with your actual image path */}
-            <img src="assets/total members.png" alt="Total Members" />
-            <Typography variant="h6">
+            <img src="assets/total members.png" alt="Total Members" style={{height:"2.5rem",width:"2.5rem"}} />
+            <Typography variant="h6" align="center">
               Total Number of Members in Discipleship Class
             </Typography>
             <Typography variant="h3">120</Typography>
