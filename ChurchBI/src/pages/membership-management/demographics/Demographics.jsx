@@ -1,44 +1,79 @@
 import { Box,Typography } from "@mui/material"
-import { sampleData } from "./demodata"
 import DemographicCard from "./DemographicCard"
 import DoughnutC from "../../../components/DoughnutC"
 import LineChart from "../../../components/LineChart"
 import StackedBar from "./StackedBar"
+import { useState, useEffect } from "react"
 
-export default function Demographics() {
-  return (
-    <div className="demographic-main-container">
+
+// datus
+import { fetchDemographicData } from "./demographicData"
+
+const styles={
+  flexGrow:"1",
+  height:"20rem",
+}
+
+export default function Demographics() { 
+  const [demographicData, setDemographicData] = useState(null)
+  useEffect(() => {
+    const getData = async () => {
+      const data = await fetchDemographicData();
+      setDemographicData(data);
+    };
+    getData();
+  }, []);
+
+  if (!demographicData) {
+    return <div>Loading...</div>;
+  }
+
+
+ 
+ return (
+   
+   <div className="demographic-main-container">
       <Typography
        variant="h4"
        sx={{
-        padding:'1rem 0'
-       }}
-       >Overview</Typography>
+         padding:'1rem 0'
+        }}
+        >Overview</Typography>
       <div className="demographic-container">
         <div className="left-demo-content">
         
-        <div style={{
-          display:"flex",
-          width:"20rem",
-          height:"18rem",
-          gap:"1em",
-          border:"1px solid blue"
-        }}>
-          <div>
-            <DemographicCard data={sampleData.locationDistribution} title="Data"/>
-          </div>
-          <div>
-            <DemographicCard data={sampleData.locationDistribution} title="Data"/>
-          </div>
-          </div>
+            <div style={{
+              display:"flex",
+              flexWrap:"wrap",
+              justifyContent:"space-between",
+              gap:"1em",
+            }}>
+              <Box sx={styles}>
+                <DemographicCard data={demographicData.ageDistribution} title="Age"/>
+              </Box>
 
-          <div style={{maxWidth:"42.5rem"}}>
-            <LineChart data={sampleData.membershipOverTime}/>
-          </div>
-        </div>
+              <Box sx={styles}>
+                <DemographicCard data={demographicData.genderDistribution} title="Gender"/>
+              </Box>
+              <Box sx={styles}>
+                <DemographicCard data={demographicData.marriage} title="Marriage"/>
+              </Box>
+              </div>
 
-        <div className="right-demo-content">
-          <DemographicCard data={sampleData.ageDistribution} title="Data"/>
+          <Box >
+            <LineChart data={demographicData.membershipOverTime}/>
+          </Box>
+
+          <Box >
+            <StackedBar data={demographicData.locationDistribution} title="Residence"/>
+          </Box>
+          
+          <Box>
+            <StackedBar data={demographicData.countryOfOrigin} title="County of Origin"/>
+          </Box>
+
+      
+
           
         </div>
       </div>

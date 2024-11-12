@@ -41,29 +41,3 @@ function DemographicCard({title,data}) {
 }
 
 export default DemographicCard
-{/* <div className="demographic-card">
-    <Box elevation={3} sx={{
-        background:"#fff",
-        display:"flex",
-        flexDirection:"column",
-        padding:"1rem",
-        width:'100%'
-        
-    }}>
-        <Typography 
-        sx={
-            {
-            color:'black',
-            fontSize:"1.5rem",
-            fontWeight:"bold",
-            marginBottom:"1rem",
-            textTransform:"capitalize",
-        }
-        }
-        >{title}</Typography>
-        <div>
-            {shape}
-        </div>
-    </Box>
-      
-    </div> */}
