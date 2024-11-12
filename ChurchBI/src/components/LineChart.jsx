@@ -19,9 +19,13 @@ function LineChart({data}) {
     }
 
   return (
-    <div>
-      <Line data={data} options={lineChartOptions}/>
-    </div>
+      <Line
+      style={{
+        padding:"2em 1em",
+        background:"#fff",
+        borderRadius:".5rem"
+      }}
+       data={data} options={lineChartOptions}/>
   )
 }
 

@@ -22,11 +22,11 @@ export default function SideBar() {
   return (
     <Sidebar
       style={{
-        position: "fixed", 
+
+        position:"sticky",
         left: 0,
         top: 0,
         height: "100vh",
-        width: "250px", 
         zIndex: 1000,
       }}
       backgroundColor="primary"

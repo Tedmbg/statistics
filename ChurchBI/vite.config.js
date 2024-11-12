@@ -9,13 +9,13 @@ export default defineConfig({
       '@': path.resolve('./src'),
     },
   },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000', // Your backend URL
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/api/, '/api')
-      }
-    }
-  }
+  // server: {
+  //   proxy: {
+  //     '/api': {
+  //       target: 'http://localhost:3000',
+  //       changeOrigin: true,
+  //       rewrite: path => path.replace(/^\/api/, '/api')
+  //     }
+  //   }
+  // }
 });
