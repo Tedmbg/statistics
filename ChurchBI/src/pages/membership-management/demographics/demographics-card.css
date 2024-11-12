@@ -18,13 +18,11 @@
     display: flex;
     flex-direction: column;
     gap: 1em;
+    max-width: 80rem;
 }
 
+.shape-container{
 
-
-@media (max-width: 1000px) {
-  .demographic-container {
-    grid-template-columns: 1fr;
-    gap: 1em;
-  }
+  border-radius:1em ;
+  background-color: white;
 }
