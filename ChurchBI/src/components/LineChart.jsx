@@ -23,6 +23,7 @@ function LineChart({data}) {
       style={{
         padding:"2em 1em",
         background:"#fff",
+        width:"100%",
         borderRadius:".5rem"
       }}
        data={data} options={lineChartOptions}/>

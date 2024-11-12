@@ -50,7 +50,8 @@ export default function Demographics() {
         
             <div style={{
               display:"flex",
-              // flexWrap:"wrap",
+              flexWrap:"wrap",
+              justifyContent:'space-between',
               gap:"1em",
             }}>
 
@@ -68,7 +69,7 @@ export default function Demographics() {
               </div>
               </div>
 
-          <Box >
+          <Box>
             <LineChart data={demographicData.membershipOverTime}/>
           </Box>
 
@@ -80,9 +81,6 @@ export default function Demographics() {
             <StackedBar data={demographicData.countryOfOrigin} title="County of Origin"/>
           </Box>
 
-      
-
-          
         </div>
       </div>
     </div>

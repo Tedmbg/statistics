@@ -10,6 +10,7 @@
 
 .demographic-container {
  display: grid;
+ width: 100%;
  gap: 2rem;
   
 }
@@ -21,8 +22,14 @@
     max-width: 80rem;
 }
 
+
 .shape-container{
 
   border-radius:1em ;
   background-color: white;
+}
+@media(min-width:80rem){
+  .left-demo-content{
+    width: 100%;
+  }
 }
