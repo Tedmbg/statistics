@@ -10,13 +10,14 @@ import SailingIcon from '@mui/icons-material/Sailing';
 import GridViewIcon from '@mui/icons-material/GridView';
 import ArrowRightOutlinedIcon from '@mui/icons-material/ArrowRightOutlined';
 
-export default function SideBar() {
+export default function SideBar(isvisible) {
   const location = useLocation();
   
   const checkActive = (path) => {
     return location.pathname === path;
   };
 
+  console.log(isvisible.isvisible)
   
 
   return (
@@ -27,11 +28,13 @@ export default function SideBar() {
         left: 0,
         top: 0,
         height: "100vh",
-        zIndex: 1000,
+        display:isvisible.isvisible? "block":"none"
+
       }}
       backgroundColor="primary"
       border="none"
-      color="#A9A7A7"        
+      color="#A9A7A7"   
+           
     >
 
       <Typography 
