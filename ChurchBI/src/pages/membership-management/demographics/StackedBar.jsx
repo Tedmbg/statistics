@@ -1,6 +1,7 @@
 import { Bar } from "react-chartjs-2";
-function StackedBar({data,title}) {
+function StackedBar({data,title,axis,stacked=false}) {
     const options = {
+        indexAxis: axis === "y" ? "y" : "x",
         responsive: true,
         plugins: {
           legend: {
@@ -27,12 +28,16 @@ function StackedBar({data,title}) {
             beginAtZero: true,
           },
         },
+        barPercentage: stacked ? 1.0 : 0.9,
+        categoryPercentage: stacked ? 1.0 : 0.8,
+        // barThickness: 20,
       };
   return (
     <Bar style={{
         padding:"2em 1em",
         background:"#fff",
-        borderRadius:".5rem"
+        borderRadius:".5rem",
+        width:"100%"
       }} data={data} options={options} />
   )
 }

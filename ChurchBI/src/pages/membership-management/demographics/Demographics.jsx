@@ -8,15 +8,18 @@ import { useState, useEffect } from "react"
 
 // datus
 import { fetchDemographicData } from "./demographicData"
+import WorkStatusChart from "./WorkStatusChart"
 
-const styles={
-  width:"18rem",
-  widtd:"25rem",
- 
+const boxStyle={
+  padding:"2em 1em",
+  background:"#fff",
+  borderRadius:".5rem",
+  width:"100%"
 }
 const titleStyles={
-  fontSize:"1.5rem",
+  fontSize:"1.4rem",
   color:"black",
+  fontWeight:"bold",
   padding:"0 0 1rem 1rem"
 }
 
@@ -50,7 +53,7 @@ export default function Demographics() {
         
             <div style={{
               display:"flex",
-              flexWrap:"wrap",
+              // flexWrap:"wrap",
               justifyContent:'space-between',
               gap:"1em",
             }}>
@@ -69,16 +72,22 @@ export default function Demographics() {
               </div>
               </div>
 
-          <Box>
-            <LineChart data={demographicData.membershipOverTime}/>
+          <Box style={boxStyle}>
+            <LineChart data={demographicData.membershipOverTime} title="Members per Month"/>
           </Box>
 
-          <Box >
+          <Box style={boxStyle}>
             <StackedBar data={demographicData.locationDistribution} title="Residence"/>
           </Box>
           
-          <Box>
+          <Box style={boxStyle}>
             <StackedBar data={demographicData.countryOfOrigin} title="County of Origin"/>
+          </Box>
+
+          <Box 
+                style={boxStyle}
+                sx={{height:"400px"}}>
+            <StackedBar data={demographicData.workStatus} title="Work Status" axis="y" stacked={true}/>
           </Box>
 
         </div>
