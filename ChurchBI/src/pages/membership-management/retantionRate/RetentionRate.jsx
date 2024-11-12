@@ -23,6 +23,12 @@ import {
 import BarChart from "../../../components/BarChart"; // Import the BarChart component
 import DoughnutC from "../../../components/DoughnutC"; // Import your custom DoughnutC component
 
+// Import JSON data
+import ageData from "../../../data/ageDataRetention.json";
+import workStatusData from "../../../data/workStatusDataRetention.json";
+import discipleshipClasses from "../../../data/discipleshipClasses.json";
+import retentionData from "../../../data/retentionDataGraph.json";
+
 // Register Chart.js components
 ChartJS.register(
   BarElement,
@@ -32,54 +38,6 @@ ChartJS.register(
   Tooltip,
   Title
 );
-
-// Dummy data for the charts
-const ageData = [20, 30, 25, 25];
-const workStatusData = [80, 20];
-const retentionData = [
-  { month: "Jan", male: 10, female: 20 },
-  { month: "Feb", male: 15, female: 10 },
-  { month: "Mar", male: 12, female: 18 },
-  { month: "Apr", male: 8, female: 17 },
-  { month: "May", male: 10, female: 10 },
-  { month: "Jun", male: 12, female: 8 },
-  { month: "Jul", male: 20, female: 15 },
-  { month: "Aug", male: 15, female: 12 },
-  { month: "Sep", male: 10, female: 10 },
-];
-
-const discipleshipClasses = [
-  {
-    className: "Class 1",
-    leaderName: "John Kimani",
-    label: "mb .12",
-    avatar: "path/to/avatar1.jpg",
-  },
-  {
-    className: "Class 5",
-    leaderName: "Lady John",
-    label: "mb .16",
-    avatar: "path/to/avatar2.jpg",
-  },
-  {
-    className: "Class 9",
-    leaderName: "Zack Chesoni",
-    label: "mb .19",
-    avatar: "path/to/avatar3.jpg",
-  },
-  {
-    className: "Class 2",
-    leaderName: "Shem Mustafa",
-    label: "mb .22",
-    avatar: "path/to/avatar4.jpg",
-  },
-  {
-    className: "Class 3",
-    leaderName: "Jane Rotich",
-    label: "mb .23",
-    avatar: "path/to/avatar5.jpg",
-  },
-];
 
 function RetentionRate() {
   // Prepare data and options for the charts
@@ -283,11 +241,14 @@ function RetentionRate() {
         </Grid>
         <Grid item xs={12} md={4}>
           {/* Discipleship classes */}
-          <Card sx={{ padding: "1.5rem" ,backgroundColor:"#fff"}}>
+          <Card sx={{ padding: "1.5rem", backgroundColor: "#fff" }}>
             <Typography variant="h6">Discipleship Classes</Typography>
             <List>
               {discipleshipClasses.map((item, index) => (
-                <ListItem key={index} sx={{ paddingLeft: 0, paddingRight: 0 }}>
+                <ListItem
+                  key={index}
+                  sx={{ paddingLeft: 0, paddingRight: 0 }}
+                >
                   <ListItemAvatar>
                     <Avatar src={item.avatar} alt={item.leaderName} />
                   </ListItemAvatar>
@@ -318,12 +279,17 @@ function RetentionRate() {
           </Card>
         </Grid>
 
-     
         {/* Age Distribution Donut Chart and Work Status Donut Chart */}
         <Grid item xs={12} md={8}>
           <Grid container spacing={2}>
             <Grid item xs={6}>
-              <Card sx={{ padding: "1rem", textAlign: "center", backgroundColor:"#FFF"}}>
+              <Card
+                sx={{
+                  padding: "1rem",
+                  textAlign: "center",
+                  backgroundColor: "#FFF",
+                }}
+              >
                 <Typography variant="h6">Age Distribution</Typography>
                 <DoughnutC
                   data={ageDoughnutData}
@@ -332,7 +298,13 @@ function RetentionRate() {
               </Card>
             </Grid>
             <Grid item xs={6}>
-              <Card sx={{ padding: "1rem", textAlign: "center",backgroundColor:"#fff" }}>
+              <Card
+                sx={{
+                  padding: "1rem",
+                  textAlign: "center",
+                  backgroundColor: "#fff",
+                }}
+              >
                 <Typography variant="h6">Work Status</Typography>
                 <DoughnutC
                   data={workStatusDoughnutData}

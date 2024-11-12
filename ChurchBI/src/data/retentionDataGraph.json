@@ -1,0 +1,11 @@
+[
+  { "month": "Jan", "male": 10, "female": 20 },
+  { "month": "Feb", "male": 15, "female": 10 },
+  { "month": "Mar", "male": 12, "female": 18 },
+  { "month": "Apr", "male": 8, "female": 17 },
+  { "month": "May", "male": 10, "female": 10 },
+  { "month": "Jun", "male": 12, "female": 8 },
+  { "month": "Jul", "male": 20, "female": 15 },
+  { "month": "Aug", "male": 15, "female": 12 },
+  { "month": "Sep", "male": 10, "female": 10 }
+]
