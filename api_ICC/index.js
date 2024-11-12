@@ -236,6 +236,7 @@ app.get('/api/members/work-status', async (req, res) => {
             SELECT occupation_status, COUNT(*)::INTEGER AS count
             FROM members
             GROUP BY occupation_status
+            ORDER BY count ASC
         `;
         const result = await pool.query(query);
         res.json(result.rows);
