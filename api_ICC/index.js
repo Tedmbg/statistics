@@ -324,7 +324,9 @@ app.get('/api/members/monthly', async (req, res) => {
             SELECT 
                 TO_CHAR(membership_date, 'Mon') AS month,
                 EXTRACT(MONTH FROM membership_date) AS month_number,
-                COUNT(*)::INTEGER AS count
+                COUNT(*)::INTEGER AS count,
+                COUNT(CASE WHEN gender = 'Male' THEN 1 END)::INTEGER AS male_count,
+                COUNT(CASE WHEN gender = 'Female' THEN 1 END)::INTEGER AS female_count
             FROM members
             WHERE EXTRACT(YEAR FROM membership_date) = $1
             GROUP BY month, month_number
