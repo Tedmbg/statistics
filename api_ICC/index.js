@@ -516,6 +516,64 @@ app.post('/api/members/add', async (req, res) => {
 });
 
 
+app.get('/api/just-visiting', async (req, res) => {
+    const { startDate, endDate } = req.query;
+  
+    try {
+      const result = await pool.query(`
+        SELECT
+          COUNT(*)::INTEGER AS total_visitors
+        FROM
+          members m
+        WHERE
+          m.is_visiting = TRUE
+          AND ($1::DATE IS NULL OR m.membership_date >= $1)
+          AND ($2::DATE IS NULL OR m.membership_date <= $2);
+      `, [startDate || null, endDate || null]);
+  
+      res.json({ status: 'success', data: { total_visitors: result.rows[0].total_visitors } });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+  });
+
+
+  app.get('/api/retention-rate', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                TO_CHAR(dc.start_date, 'YYYY-MM-DD') AS start_date, -- Use full date
+                COUNT(DISTINCT m.member_id)::INTEGER  AS total_members,
+                COUNT(DISTINCT CASE WHEN m.completed_class = TRUE THEN m.member_id END)::INTEGER  AS completed_members,
+                COUNT(DISTINCT CASE WHEN m.completed_class = FALSE THEN m.member_id END)::INTEGER  AS dropped_out_members,
+                COUNT(DISTINCT CASE WHEN m.completed_class = TRUE AND m.gender = 'Male' THEN m.member_id END)::INTEGER AS male_completed,
+                COUNT(DISTINCT CASE WHEN m.completed_class = TRUE AND m.gender = 'Female' THEN m.member_id END)::INTEGER AS female_completed,
+                ROUND(
+                    COUNT(DISTINCT CASE WHEN m.completed_class = TRUE THEN m.member_id END)::decimal /
+                    NULLIF(COUNT(DISTINCT m.member_id), 0) * 100, 2
+                ) AS retention_rate
+            FROM
+                discipleship_classes dc
+            LEFT JOIN members m ON m.discipleship_class_id = dc.class_id
+            GROUP BY
+                TO_CHAR(dc.start_date, 'YYYY-MM-DD') -- Group by full date
+            ORDER BY
+                start_date; -- Order by the full date
+        `);
+    
+        res.json({ status: 'success', data: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+  
+  
+  
+
+
 
 
 // Start the server
