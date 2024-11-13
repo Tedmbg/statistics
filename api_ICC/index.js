@@ -572,8 +572,58 @@ app.get('/api/just-visiting', async (req, res) => {
 });
 
   
-  
-  
+app.get('/api/overall-retention-rate', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                COUNT(DISTINCT m.member_id) AS total_members,
+                COUNT(DISTINCT CASE WHEN m.completed_class = TRUE THEN m.member_id END)::INTEGER AS completed_members,
+                COUNT(DISTINCT CASE WHEN m.completed_class = FALSE THEN m.member_id END)::INTEGER AS dropped_out_members,
+                ROUND(
+                    COUNT(DISTINCT CASE WHEN m.completed_class = TRUE THEN m.member_id END)::decimal /
+                    NULLIF(COUNT(DISTINCT m.member_id), 0) * 100, 2
+                ) AS overall_retention_rate
+            FROM
+                members m
+            WHERE
+                m.discipleship_class_id IS NOT NULL;
+        `);
+    
+        res.json({
+            status: 'success',
+            data: {
+                total_members: result.rows[0].total_members,
+                completed_members: result.rows[0].completed_members,
+                dropped_out_members: result.rows[0].dropped_out_members,
+                overall_retention_rate: result.rows[0].overall_retention_rate
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+ 
+app.get('/api/discipleship-classes', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                dc.class_id,
+                dc.class_name,
+                dc.instructor
+            FROM
+                discipleship_classes dc
+            ORDER BY
+                dc.class_id;
+        `);
+
+        res.json({ status: 'success', data: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
 
 
 
