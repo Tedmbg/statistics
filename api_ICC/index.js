@@ -311,7 +311,7 @@ app.get('/api/members/county-origin', async (req, res) => {
     }
 });
 
-// this is the graph for retantion rate 
+
 app.get('/api/members/monthly', async (req, res) => {
     let { year } = req.query;
 
@@ -539,7 +539,7 @@ app.get('/api/just-visiting', async (req, res) => {
     }
   });
 
-
+// this is the graph for retantion rate graph
   app.get('/api/retention-rate', async (req, res) => {
     try {
         const result = await pool.query(`

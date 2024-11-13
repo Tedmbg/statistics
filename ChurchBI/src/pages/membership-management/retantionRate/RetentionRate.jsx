@@ -27,7 +27,12 @@ import DoughnutC from "../../../components/DoughnutC"; // Import your custom Dou
 import ageData from "../../../data/ageDataRetention.json";
 import workStatusData from "../../../data/workStatusDataRetention.json";
 import discipleshipClasses from "../../../data/discipleshipClasses.json";
-import fetchRetentionData from "../../../data/retentionDataGraph";
+import {
+  fetchRetentionData,
+  fetchJustVisiting,
+  fetchAverageRetentionRate,
+  fetchGenderRatio,
+} from "../../../data/retentionDataGraph";
 
 // Register Chart.js components
 ChartJS.register(
@@ -44,15 +49,30 @@ function RetentionRate() {
 
   //barchart
   const [retentionBarData, setRetentionBarData] = useState(null);
+  const [justVisiting, setJustVisiting] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const [averageRetentionRate, setAverageRetentionRate] = useState(null);
+  const [malePercentage, setMalePercentage] = useState(null);
+  const [femalePercentage, setFemalePercentage] = useState(null);
 
   useEffect(() => {
     const getData = async () => {
       try {
-        const data = await fetchRetentionData(); // Fetch dynamic data
-        setRetentionBarData(data);
+        const retentionData = await fetchRetentionData(); // Fetch dynamic data
+        setRetentionBarData(retentionData);
+
+        const visitorData = await fetchJustVisiting(); // fetch just visiting data
+        setJustVisiting(visitorData);
+
+        const avgRetention = await fetchAverageRetentionRate();
+        setAverageRetentionRate(avgRetention);
+
+        //fetch gender ratio
+        const genderRatio = await fetchGenderRatio();
+        setMalePercentage(genderRatio.malePercentage);
+        setFemalePercentage(genderRatio.femalePercentage);
+
         setLoading(false);
       } catch (err) {
         setError("Failed to load retention data");
@@ -63,22 +83,28 @@ function RetentionRate() {
     getData();
   }, []);
 
-// test if data is going to be sent.
-console.log('Retention Bar Data:', retentionBarData);
-
+  // test if data is going to be sent.
+  console.log("Retention Bar Data:", retentionBarData);
 
   const retentionBarOptions = {
     responsive: true,
     plugins: {
-      title: { display: true, text: "Retention Rate" },
+      title: { display: true, text: "Retention Rate by Gender" },
       tooltip: { enabled: true },
+      legend: { position: "bottom" },
     },
     scales: {
       x: { stacked: true },
       y: {
         stacked: true,
         beginAtZero: true,
-        title: { display: true, text: "%" },
+        max: 100, // Maximum value for percentage
+        ticks: {
+          callback: function (value) {
+            return value + "%";
+          },
+        },
+        title: { display: true, text: "Retention Rate (%)" },
       },
     },
   };
@@ -147,12 +173,16 @@ console.log('Retention Bar Data:', retentionBarData);
               height: "15.75rem",
               display: "flex",
               justifyContent: "center",
-              flexDirection:"column",
-              alignItems:"center"
+              flexDirection: "column",
+              alignItems: "center",
             }}
           >
             {/* Replace with your actual image path */}
-            <img src="assets/total members.png" alt="Total Members" style={{height:"2.5rem",width:"2.5rem"}} />
+            <img
+              src="assets/total members.png"
+              alt="Total Members"
+              style={{ height: "2.5rem", width: "2.5rem" }}
+            />
             <Typography variant="h6" align="center">
               Total Number of Members in Discipleship Class
             </Typography>
@@ -175,21 +205,43 @@ console.log('Retention Bar Data:', retentionBarData);
             <Typography variant="h6" style={{ textAlign: "center" }}>
               Gender Ratio
             </Typography>
-            <Box display="flex" justifyContent="space-between">
-              <img
-                src="/assets/male_avatar.png"
-                style={{ height: "50px", width: "50px" }}
-              />
-              <Typography sx={{ fontSize: "1.575rem", mt: 1, pl: 1, pr: 0.1 }}>
-                40%
-              </Typography>
-              <img
-                src="/assets/female_avatar.png"
-                style={{ height: "50px", width: "50px" }}
-              />
-              <Typography sx={{ fontSize: "1.575rem", mt: 1, pl: 1 }}>
-                60%
-              </Typography>
+            <Box
+              display="flex"
+              justifyContent="space-around"
+              alignItems="center"
+            >
+              <Box textAlign="center">
+                <img
+                  src="/assets/male_avatar.png"
+                  alt="Male Members"
+                  style={{ height: "50px", width: "50px" }}
+                />
+                {loading ? (
+                  <Typography sx={{ fontSize: "1.575rem", mt: 1 }}>
+                    ...
+                  </Typography>
+                ) : (
+                  <Typography sx={{ fontSize: "1.575rem", mt: 1 }}>
+                    {malePercentage}%
+                  </Typography>
+                )}
+              </Box>
+              <Box textAlign="center">
+                <img
+                  src="/assets/female_avatar.png"
+                  alt="Female Members"
+                  style={{ height: "50px", width: "50px" }}
+                />
+                {loading ? (
+                  <Typography sx={{ fontSize: "1.575rem", mt: 1 }}>
+                    ...
+                  </Typography>
+                ) : (
+                  <Typography sx={{ fontSize: "1.575rem", mt: 1 }}>
+                    {femalePercentage}%
+                  </Typography>
+                )}
+              </Box>
             </Box>
           </Card>
         </Grid>
@@ -208,10 +260,17 @@ console.log('Retention Bar Data:', retentionBarData);
               alignItems: "center",
             }}
           >
-            {/* Replace with your actual image path */}
             <img src="/assets/retationrate.png" alt="Retention Rate" />
-            <Typography variant="h6">Retention Rate</Typography>
-            <Typography variant="h3">17%</Typography>
+            <Typography variant="h6">Average Retention Rate</Typography>
+            {loading ? (
+              <Typography variant="h6">Loading...</Typography>
+            ) : error ? (
+              <Typography variant="h6" color="error">
+                Error
+              </Typography>
+            ) : (
+              <Typography variant="h3">{averageRetentionRate}%</Typography>
+            )}
           </Card>
         </Grid>
 
@@ -229,10 +288,21 @@ console.log('Retention Bar Data:', retentionBarData);
               alignItems: "center",
             }}
           >
-            {/* Replace with your actual image path */}
-            <img src="public/assets/visitor.png" alt="Just Visiting" />
+            <img
+              src="public/assets/visitor.png"
+              alt="Just Visiting"
+              style={{ height: "2.5rem", width: "2.5rem" }}
+            />
             <Typography variant="h6">Just Visiting</Typography>
-            <Typography variant="h3">107</Typography>
+            {loading ? (
+              <Typography variant="h6">Loading...</Typography>
+            ) : error ? (
+              <Typography variant="h3" color="error">
+                Error
+              </Typography>
+            ) : (
+              <Typography variant="h3">{justVisiting}</Typography>
+            )}
           </Card>
         </Grid>
       </Grid>
@@ -240,11 +310,16 @@ console.log('Retention Bar Data:', retentionBarData);
       {/* Additional spacing between the top cards and the rest */}
       <Box my={4} />
 
-
       <Grid container spacing={2}>
         {/* Retention Rate Chart */}
         <Grid item xs={12} md={8}>
-          <Card sx={{ padding: "1.5rem", backgroundColor: "#fff" }}>
+          <Card
+            sx={{
+              padding: "1.5rem",
+              backgroundColor: "#fff",
+              boxShadow: "none",
+            }}
+          >
             {loading ? (
               <Typography>Loading...</Typography>
             ) : error ? (
@@ -254,7 +329,7 @@ console.log('Retention Bar Data:', retentionBarData);
                 data={retentionBarData}
                 options={retentionBarOptions}
                 title="Retention Rate"
-                height={"31.9895rem"} // Adjust height if needed
+                height={"41.9895rem"} // Adjust height if needed
               />
             )}
           </Card>
@@ -266,10 +341,7 @@ console.log('Retention Bar Data:', retentionBarData);
             <Typography variant="h6">Discipleship Classes</Typography>
             <List>
               {discipleshipClasses.map((item, index) => (
-                <ListItem
-                  key={index}
-                  sx={{ paddingLeft: 0, paddingRight: 0 }}
-                >
+                <ListItem key={index} sx={{ paddingLeft: 0, paddingRight: 0 }}>
                   <ListItemAvatar>
                     <Avatar src={item.avatar} alt={item.leaderName} />
                   </ListItemAvatar>
@@ -309,9 +381,15 @@ console.log('Retention Bar Data:', retentionBarData);
                   padding: "1rem",
                   textAlign: "center",
                   backgroundColor: "#FFF",
+                  display: "flex", // Enable flex layout
+                  flexDirection: "column", // Stack children vertically
+                  justifyContent: "center", // Center children vertically
+                  alignItems: "center", // Center children horizontally
                 }}
               >
-                <Typography variant="h6">Age Distribution</Typography>
+                <Typography variant="h6" mb={2}>
+                  Age Distribution
+                </Typography>
                 <DoughnutC
                   data={ageDoughnutData}
                   options={ageDoughnutOptions}
@@ -323,10 +401,16 @@ console.log('Retention Bar Data:', retentionBarData);
                 sx={{
                   padding: "1rem",
                   textAlign: "center",
-                  backgroundColor: "#fff",
+                  backgroundColor: "#FFF",
+                  display: "flex", // Enable flex layout
+                  flexDirection: "column", // Stack children vertically
+                  justifyContent: "center", // Center children vertically
+                  alignItems: "center", // Center children horizontally
                 }}
               >
-                <Typography variant="h6">Work Status</Typography>
+                <Typography variant="h6" mb={2}>
+                  Work Status
+                </Typography>
                 <DoughnutC
                   data={workStatusDoughnutData}
                   options={workStatusDoughnutOptions}
