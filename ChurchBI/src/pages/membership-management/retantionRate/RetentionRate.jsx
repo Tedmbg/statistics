@@ -375,6 +375,7 @@ function RetentionRate() {
         {/* Age Distribution Donut Chart and Work Status Donut Chart */}
         <Grid item xs={12} md={8}>
           <Grid container spacing={2}>
+            {/* Age Distribution */}
             <Grid item xs={6}>
               <Card
                 sx={{
@@ -388,7 +389,7 @@ function RetentionRate() {
                 }}
               >
                 <Typography variant="h6" mb={2}>
-                  Age Distribution
+                  Age incomplete
                 </Typography>
                 <DoughnutC
                   data={ageDoughnutData}
@@ -396,6 +397,8 @@ function RetentionRate() {
                 />
               </Card>
             </Grid>
+
+            {/* Work Status */}
             <Grid item xs={6}>
               <Card
                 sx={{
@@ -409,10 +412,72 @@ function RetentionRate() {
                 }}
               >
                 <Typography variant="h6" mb={2}>
-                  Work Status
+                  Work Status incomplete
                 </Typography>
                 <DoughnutC
                   data={workStatusDoughnutData}
+                  options={workStatusDoughnutOptions}
+                />
+              </Card>
+            </Grid>
+
+            {/* Age Completed */}
+            <Grid item xs={6}>
+              <Card
+                sx={{
+                  padding: "1rem",
+                  textAlign: "center",
+                  backgroundColor: "#FFF",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Typography variant="h6" mb={2}>
+                  Age Completed
+                </Typography>
+                <DoughnutC
+                  data={{
+                    labels: ["Completed", "Incomplete"],
+                    datasets: [
+                      {
+                        data: [40, 10], // Replace with your data
+                        backgroundColor: ["#4CAF50", "#F44336"], // Green and Red
+                      },
+                    ],
+                  }}
+                  options={ageDoughnutOptions}
+                />
+              </Card>
+            </Grid>
+
+            {/* Work Status Completed */}
+            <Grid item xs={6}>
+              <Card
+                sx={{
+                  padding: "1rem",
+                  textAlign: "center",
+                  backgroundColor: "#FFF",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Typography variant="h6" mb={2}>
+                  Work Status Completed
+                </Typography>
+                <DoughnutC
+                  data={{
+                    labels: ["Completed", "Incomplete"],
+                    datasets: [
+                      {
+                        data: [60, 20], // Replace with your data
+                        backgroundColor: ["#4CAF50", "#F44336"], // Green and Red
+                      },
+                    ],
+                  }}
                   options={workStatusDoughnutOptions}
                 />
               </Card>
