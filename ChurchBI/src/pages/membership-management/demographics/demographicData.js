@@ -1,4 +1,14 @@
 // src/utils/fetchDashboardData.js
+
+const colors = [
+  "#C7B3FF",
+  "#B39AFF",
+  "#9F80FF",
+  "#8A66FF",
+  "#754DFF",
+  "#6033FF",
+  "#4B1AFF",
+];
 export const fetchDemographicData = async () => {
   try {
     const [
@@ -35,7 +45,7 @@ export const fetchDemographicData = async () => {
         datasets: [
           {
             data: workStatusRes.map((item)=>item.count),
-            backgroundColor: ["#6c8ef2", "#8d78eb"]
+            backgroundColor:workStatusRes.map((_, i) => colors[i % colors.length]),
           }
         ]
       },

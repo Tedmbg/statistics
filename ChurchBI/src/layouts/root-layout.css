@@ -39,6 +39,7 @@
     height: 40px;
     background-color:#313131;
     opacity: 0;
+    transition-property: opacity;
     /* z-index: 10000000; */
     border: none;
     border-radius: .6rem;
@@ -59,6 +60,7 @@
     top: 0;
     bottom: 0;
     opacity: 0;
+    transition-property: opacity;
     
   }
 /*  hover for all btn and after element*/
@@ -66,7 +68,11 @@
 .sidebar-content:hover .toggle-siderbar-btn {
   opacity: 1;
 }
-
+.sidebar-content:hover::after,
+.sidebar-content:hover .toggle-siderbar-btn {
+  transition-timing-function: ease-in-out;
+  transition-duration: .5s;
+}
   
 
   .main-content {

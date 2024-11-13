@@ -28,7 +28,10 @@ export default function SideBar(isvisible) {
         left: 0,
         top: 0,
         height: "100vh",
-        display:isvisible.isvisible? "block":"none"
+        display:isvisible.isvisible? "block":"none",
+        transitionProperty:"display",
+        transitionTimingFunction:"ease-in-out",
+        transitionDuration:"5s"
 
       }}
       backgroundColor="primary"
