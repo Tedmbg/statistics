@@ -1,5 +1,5 @@
 // RetentionRate.jsx
-
+import { useEffect, useState } from "react";
 import {
   Box,
   Card,
@@ -27,7 +27,7 @@ import DoughnutC from "../../../components/DoughnutC"; // Import your custom Dou
 import ageData from "../../../data/ageDataRetention.json";
 import workStatusData from "../../../data/workStatusDataRetention.json";
 import discipleshipClasses from "../../../data/discipleshipClasses.json";
-import retentionData from "../../../data/retentionDataGraph.json";
+import fetchRetentionData from "../../../data/retentionDataGraph";
 
 // Register Chart.js components
 ChartJS.register(
@@ -42,21 +42,30 @@ ChartJS.register(
 function RetentionRate() {
   // Prepare data and options for the charts
 
-  const retentionBarData = {
-    labels: retentionData.map((data) => data.month),
-    datasets: [
-      {
-        label: "Male",
-        data: retentionData.map((data) => data.male),
-        backgroundColor: "rgba(54, 162, 235, 0.7)",
-      },
-      {
-        label: "Female",
-        data: retentionData.map((data) => data.female),
-        backgroundColor: "rgba(153, 102, 255, 0.7)",
-      },
-    ],
-  };
+  //barchart
+  const [retentionBarData, setRetentionBarData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        const data = await fetchRetentionData(); // Fetch dynamic data
+        setRetentionBarData(data);
+        setLoading(false);
+      } catch (err) {
+        setError("Failed to load retention data");
+        setLoading(false);
+      }
+    };
+
+    getData();
+  }, []);
+
+// test if data is going to be sent.
+console.log('Retention Bar Data:', retentionBarData);
+
 
   const retentionBarOptions = {
     responsive: true,
@@ -231,17 +240,26 @@ function RetentionRate() {
       {/* Additional spacing between the top cards and the rest */}
       <Box my={4} />
 
-      {/* Rest of the content */}
+
       <Grid container spacing={2}>
         {/* Retention Rate Chart */}
         <Grid item xs={12} md={8}>
-          <BarChart
-            data={retentionBarData}
-            options={retentionBarOptions}
-            title="Retention Rate"
-            height={"31.9895rem"} // Adjust height if needed
-          />
+          <Card sx={{ padding: "1.5rem", backgroundColor: "#fff" }}>
+            {loading ? (
+              <Typography>Loading...</Typography>
+            ) : error ? (
+              <Typography color="error">{error}</Typography>
+            ) : (
+              <BarChart
+                data={retentionBarData}
+                options={retentionBarOptions}
+                title="Retention Rate"
+                height={"31.9895rem"} // Adjust height if needed
+              />
+            )}
+          </Card>
         </Grid>
+
         <Grid item xs={12} md={4}>
           {/* Discipleship classes */}
           <Card sx={{ padding: "1.5rem", backgroundColor: "#fff" }}>

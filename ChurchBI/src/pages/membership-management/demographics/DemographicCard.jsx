@@ -6,7 +6,7 @@ import { Chart as ChartJS } from "chart.js/auto";
 function DemographicCard({title,data}) {
   const options = {
     responsive: true,
-    maintainAspectRatio: false,
+    // maintainAspectRatio: false,
     plugins: {
       legend: {
         position: 'bottom',
