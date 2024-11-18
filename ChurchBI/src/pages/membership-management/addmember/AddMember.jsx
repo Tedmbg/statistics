@@ -16,9 +16,29 @@ import {
 function AddMemberForm({ initialData }) {
   const [memberToDelete, setMemberToDelete] = useState(null)
   const [members, setMembers] = useState()
-  const [selectedMinistry, setSelectedMinistry] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [selectedRole, setSelectedRole] = useState("");
+  const [fellowshipCategory, setFellowshipCategory] = useState("");
+  const [fellowshipRole, setFellowshipRole] = useState("");
+  const [serviceCategory, setServiceCategory] = useState("");
+  const [serviceRole, setServiceRole] = useState("");
+  
+  const handleFellowshipCategoryChange = (event) => {
+    setFellowshipCategory(event.target.value);
+    setFellowshipRole(""); // Reset role when category changes
+  };
+  
+  const handleFellowshipRoleChange = (event) => {
+    setFellowshipRole(event.target.value);
+  };
+  
+  const handleServiceCategoryChange = (event) => {
+    setServiceCategory(event.target.value);
+    setServiceRole(""); // Reset role when category changes
+  };
+  
+  const handleServiceRoleChange = (event) => {
+    setServiceRole(event.target.value);
+  };
+  
 
   const ministryData = {
   "Fellowship Ministry": {
@@ -35,17 +55,6 @@ function AddMemberForm({ initialData }) {
       "Media and Technology": ["Audio Technician", "Livestream Operator", "Member"],
     },
   },
-};
-
-const handleMinistryChange = (event) => {
-  setSelectedMinistry(event.target.value);
-  setSelectedCategory(""); // Reset category when ministry changes
-  setSelectedRole(""); // Reset role when ministry changes
-};
-
-const handleCategoryChange = (event) => {
-  setSelectedCategory(event.target.value);
-  setSelectedRole(""); // Reset role when category changes
 };
 
 
@@ -154,78 +163,26 @@ const handleCategoryChange = (event) => {
       {/* Engineering and Technical Fields */}
       <MenuItem value="Engineering and Technical">Engineering and Technical</MenuItem>
 
-      {/* Examples */}
-      {/* <MenuItem value="Engineer">Engineer</MenuItem>
-      <MenuItem value="Technician">Technician</MenuItem> */}
-
       {/* Medical and Healthcare */}
       <MenuItem value="Medical and Healthcare">Medical and Healthcare</MenuItem>
-
-      {/* Examples */}
-      {/* <MenuItem value="Doctor">Doctor</MenuItem>
-      <MenuItem value="Nurse">Nurse</MenuItem>
-      <MenuItem value="Pharmacist">Pharmacist</MenuItem>
-      <MenuItem value="Healthcare Worker">Healthcare Worker</MenuItem> */}
 
       {/* Education */}
       <MenuItem value="Education">Education</MenuItem>
 
-      {/* Examples
-      <MenuItem value="Teacher">Teacher</MenuItem>
-      <MenuItem value="Professor">Professor</MenuItem>
-      <MenuItem value="Education Consultant">Education Consultant</MenuItem>
-       */}
-      
-
       {/* Business and Management */}
       <MenuItem value="Business and Management">Business and Management</MenuItem>
-
-      {/* Examples
-      <MenuItem value="Business Owner">Business Owner</MenuItem>
-      <MenuItem value="Manager">Manager</MenuItem>
-      <MenuItem value="Salesperson">Salesperson</MenuItem>
-      <MenuItem value="Accountant">Accountant</MenuItem>
-       */}
 
       {/* Information Technology */}
       <MenuItem value="Information Technology">Information Technology</MenuItem>
 
-      {/* Examples 
-      <MenuItem value="Software Developer">Software Developer</MenuItem>
-      <MenuItem value="IT Specialist">IT Specialist</MenuItem>
-      <MenuItem value="Data Analyst">Data Analyst</MenuItem>
-      <MenuItem value="Cybersecurity Analyst">Cybersecurity Analyst</MenuItem>
-      */}
-
       {/* Creative Arts */}
       <MenuItem value="Creative Arts">Creative Arts</MenuItem>
-
-      {/* Examples 
-      <MenuItem value="Designer">Designer</MenuItem>
-      <MenuItem value="Photographer">Photographer</MenuItem>
-      <MenuItem value="Writer">Writer</MenuItem>
-      <MenuItem value="Musician">Musician</MenuItem>
-      */}
 
       {/* Trades and Crafts */}
       <MenuItem value="Trades and Crafts">Trades and Crafts</MenuItem>
 
-      {/* Examples 
-      <MenuItem value="Electrician">Electrician</MenuItem>
-      <MenuItem value="Plumber">Plumber</MenuItem>
-      <MenuItem value="Mechanic">Mechanic</MenuItem>
-      <MenuItem value="Carpenter">Carpenter</MenuItem>
-      */}
-
       {/* Government and Law */}
       <MenuItem value="Government and Law">Government and Law</MenuItem>
-
-      {/* Examples 
-      <MenuItem value="Lawyer">Lawyer</MenuItem>
-      <MenuItem value="Civil Servant">Civil Servant</MenuItem>
-      <MenuItem value="Police Officer">Police Officer</MenuItem>
-      <MenuItem value="Military Personnel">Military Personnel</MenuItem>
-      */}
 
       {/* Others */}
       <MenuItem value="Student">Student</MenuItem>
@@ -358,69 +315,102 @@ const handleCategoryChange = (event) => {
     </Box>
   </Card>
 </Grid>
-<Grid item xs={12} md={12}>
+<Grid item xs={12} md={6}>
   <Card sx={{ padding: '1.5rem', marginBottom: '1.5rem', backgroundColor: 'transparent', boxShadow: 'none' }}>
-    <Box sx={{ marginTop: '1rem' }}>
     <Typography variant="h6" marginBottom={2.5}>Volunteering</Typography>
-    <Grid container spacing={2}>
-      
-  {/* Ministry Dropdown */}
-  <Grid item xs={12} md={4}>
-    <FormControl fullWidth variant="outlined" sx={{ borderRadius: "8px", backgroundColor: "#ffffff" }}>
-      <InputLabel>Ministry</InputLabel>
-      <Select value={selectedMinistry} onChange={handleMinistryChange} label="Ministry">
-        <MenuItem value="Fellowship Ministry">Fellowship Ministry</MenuItem>
-        <MenuItem value="Service Ministry">Service Ministry</MenuItem>
-      </Select>
-    </FormControl>
-  </Grid>
-
-  {/* Category Dropdown */}
-  <Grid item xs={12} md={4}>
-    <FormControl
-      fullWidth
-      variant="outlined"
-      sx={{ borderRadius: "8px", backgroundColor: "#ffffff" }}
-      disabled={!selectedMinistry}
+    <Grid container spacing={4}>
+      {/* Fellowship Ministry Section */}
+      <Grid item xs={12}>
+  <Typography variant="subtitle1" sx={{ fontWeight: "bold", marginBottom: "1rem" }}>
+    Fellowship Ministry
+  </Typography>
+  <FormControl
+    fullWidth
+    variant="outlined"
+    sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem" }}
+  >
+    <InputLabel>Category</InputLabel>
+    <Select
+      value={fellowshipCategory}
+      onChange={handleFellowshipCategoryChange}
+      label="Category"
     >
-      <InputLabel>Category</InputLabel>
-      <Select value={selectedCategory} onChange={handleCategoryChange} label="Category">
-        {selectedMinistry &&
-          Object.keys(ministryData[selectedMinistry].categories).map((category, index) => (
-            <MenuItem key={index} value={category}>
-              {category}
-            </MenuItem>
-          ))}
-      </Select>
-    </FormControl>
-  </Grid>
-
-  {/* Role Dropdown */}
-  <Grid item xs={12} md={4}>
-    <FormControl
-      fullWidth
-      variant="outlined"
-      sx={{ borderRadius: "8px", backgroundColor: "#ffffff" }}
-      disabled={!selectedCategory}
+      {Object.keys(ministryData["Fellowship Ministry"].categories).map((category, index) => (
+        <MenuItem key={index} value={category}>
+          {category}
+        </MenuItem>
+      ))}
+    </Select>
+  </FormControl>
+  <FormControl
+    fullWidth
+    variant="outlined"
+    sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem" }}
+    disabled={!fellowshipCategory}
+  >
+    <InputLabel>Role</InputLabel>
+    <Select
+      value={fellowshipRole}
+      onChange={handleFellowshipRoleChange}
+      label="Role"
     >
-      <InputLabel>Role</InputLabel>
-      <Select
-        value={selectedRole}
-        onChange={(e) => setSelectedRole(e.target.value)}
-        label="Role"
-      >
-        {selectedCategory &&
-          ministryData[selectedMinistry].categories[selectedCategory].map((role, index) => (
-            <MenuItem key={index} value={role}>
-              {role}
-            </MenuItem>
-          ))}
-      </Select>
-    </FormControl>
-  </Grid>
+      {fellowshipCategory &&
+        ministryData["Fellowship Ministry"].categories[fellowshipCategory]?.map((role, index) => (
+          <MenuItem key={index} value={role}>
+            {role}
+          </MenuItem>
+        ))}
+    </Select>
+  </FormControl>
 </Grid>
 
-    </Box>
+
+      {/* Service Ministry Section */}
+      <Grid item xs={12}>
+  <Typography variant="subtitle1" sx={{ fontWeight: "bold", marginBottom: "1rem" }}>
+    Service Ministry
+  </Typography>
+  <FormControl
+    fullWidth
+    variant="outlined"
+    sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem" }}
+  >
+    <InputLabel>Category</InputLabel>
+    <Select
+      value={serviceCategory}
+      onChange={handleServiceCategoryChange}
+      label="Category"
+    >
+      {Object.keys(ministryData["Service Ministry"].categories).map((category, index) => (
+        <MenuItem key={index} value={category}>
+          {category}
+        </MenuItem>
+      ))}
+    </Select>
+  </FormControl>
+  <FormControl
+    fullWidth
+    variant="outlined"
+    sx={{ borderRadius: "8px", backgroundColor: "#ffffff" }}
+    disabled={!serviceCategory}
+  >
+    <InputLabel>Role</InputLabel>
+    <Select
+      value={serviceRole}
+      onChange={handleServiceRoleChange}
+      label="Role"
+    >
+      {serviceCategory &&
+        ministryData["Service Ministry"].categories[serviceCategory]?.map((role, index) => (
+          <MenuItem key={index} value={role}>
+            {role}
+          </MenuItem>
+        ))}
+    </Select>
+  </FormControl>
+</Grid>
+
+    </Grid>
   </Card>
 </Grid>
 
