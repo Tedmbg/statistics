@@ -1,75 +1,94 @@
-import { Box,Typography } from "@mui/material"
-import { sampleData } from "./demodata"
-import DemographicCard from "./DemographicCard"
-import DoughnutC from "../../../components/DoughnutC"
-import LineChart from "../../../components/LineChart"
-import StackedBar from "./StackedBar"
+import { Box, Typography, CircularProgress } from "@mui/material";
+import DemographicCard from "./DemographicCard";
+import DoughnutC from "../../../components/DoughnutC";
+import LineChart from "../../../components/LineChart";
+import StackedBar from "./StackedBar";
+import { useState, useEffect } from "react";
+
+// datus
+import { fetchDemographicData } from "./demographicData";
+
+const boxStyle = {
+  padding: "2em 1em",
+  background: "#fff",
+  borderRadius: ".5rem",
+  width: "100%"
+};
+
+const titleStyles = {
+  fontSize: "1.4rem",
+  color: "black",
+  fontWeight: "bold",
+  padding: "0 0 1rem 1rem"
+};
 
 export default function Demographics() {
+  const [demographicData, setDemographicData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        const data = await fetchDemographicData();
+        setDemographicData(data);
+      } finally {
+        setIsLoading(false); 
+      }
+    };
+    getData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+
+
   return (
     <div className="demographic-main-container">
-      <Typography
-       variant="h4"
-       sx={{
-        padding:'1rem 0'
-       }}
-       >Overview</Typography>
+      <Typography variant="h4" sx={{ padding: '1rem 0' }}>Overview</Typography>
       <div className="demographic-container">
-
-        <div className="demographic-left-content">
-          <Box sx={{
-            display:"flex",
-            gap:"1rem",
-            marginBottom:'1rem',
-
+        <div className="left-demo-content">
+          <div style={{
+            display: "flex",
+            justifyContent: 'space-between',
+            gap: "1em",
           }}>
-              <DemographicCard 
-              title={"age"}
-              shape={<DoughnutC data={sampleData.ageDistribution}/>}
-              />
-              <DemographicCard 
-              title={"Work status"}
-              shape={<DoughnutC data={sampleData.workStatus}/>}
-              />
-          </Box>
-            
-          <Box>
-          <DemographicCard 
-              title={"membership"}
-              shape={<LineChart data={sampleData.membershipOverTime}/>}
-              />
-          </Box>
-          <Box sx={{
-            display:"flex",
-            gap:"1rem",
-            marginBottom:'1rem',
+            <div className="shape-container">
+              <h1 style={titleStyles}>Age</h1>
+              <DoughnutC data={demographicData.ageDistribution} />
+            </div>
+            <div className="shape-container">
+              <h1 style={titleStyles}>Gender</h1>
+              <DoughnutC data={demographicData.genderDistribution} />
+            </div>
+            <div className="shape-container">
+              <h1 style={titleStyles}>Marriage</h1>
+              <DoughnutC data={demographicData.marriage} />
+            </div>
+          </div>
 
-          }}>
-              <DemographicCard 
-              title={"Resdence"}
-              shape={<DoughnutC data={sampleData.ageDistribution}/>}
-              />
-              <DemographicCard 
-              title={"Count of Origin"}
-              shape={<DoughnutC data={sampleData.workStatus}/>}
-              />
+          <Box style={boxStyle}>
+            <LineChart data={demographicData.membershipOverTime} title="Members per Month" />
           </Box>
-        </div>
 
-        <div className="demographic-right-content">
-            <DemographicCard 
-                
-                title={"Location"}
-                shape={<DoughnutC data={sampleData.locationDistribution}/>}
-                />
-              <DemographicCard 
-                title={"Gender"}
-                shape={<DoughnutC data={sampleData.genderDistribution}/>}
-                />
-               <StackedBar/> 
+          <Box style={boxStyle}>
+            <StackedBar data={demographicData.locationDistribution} title="Residence" />
+          </Box>
+
+          <Box style={boxStyle}>
+            <StackedBar data={demographicData.countryOfOrigin} title="Country of Origin" />
+          </Box>
+
+          <Box style={boxStyle} sx={{ height: "400px" }}>
+            <StackedBar data={demographicData.workStatus} title="Work Status" axis="y" stacked={true} />
+          </Box>
         </div>
       </div>
     </div>
-    
-  )
+  );
 }
