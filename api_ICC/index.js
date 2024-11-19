@@ -48,6 +48,125 @@ pool.connect((err, client, release) => {
 app.get('/', (req, res) => {
   res.send('API is working!');
 });
+// Adding memeber 
+app.post('/api/members/add', async (req, res) => {
+    const {
+        sir_name,
+        middle_name,
+        last_name,
+        date_of_birth,
+        contact_info,
+        gender,
+        location,
+        county_of_origin,
+        occupation_status,
+        married_status,
+        is_visiting,
+        fellowship_ministries,
+        service_ministries,
+        is_full_member,
+        baptized,
+        conversion_date,
+        discipleship_class_id,
+        completed_class,
+        next_of_kin,
+        volunteering,
+    } = req.body;
+
+    try {
+        // Step 1: Get the next member_id
+        const nextMemberIdResult = await pool.query('SELECT COALESCE(MAX(member_id), 0) + 1 AS next_id FROM members');
+        const nextMemberId = nextMemberIdResult.rows[0].next_id;
+
+        // Step 2: Insert member into the members table
+        const memberQuery = `
+            INSERT INTO members (
+                member_id,
+                name,
+                contact_info,
+                date_of_birth,
+                married_status,
+                occupation_status,
+                fellowship_ministries,
+                service_ministries,
+                baptized,
+                conversion_date,
+                is_full_member,
+                is_visiting,
+                location,
+                county_of_origin,
+                gender,
+                discipleship_class_id,
+                completed_class,
+                membership_date
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
+            RETURNING member_id;
+        `;
+
+        const memberValues = [
+            nextMemberId,
+            `${sir_name} ${middle_name} ${last_name}`.trim(),
+            contact_info,
+            date_of_birth,
+            married_status,
+            occupation_status,
+            fellowship_ministries,
+            service_ministries,
+            !!baptized, // Convert to boolean
+            conversion_date,
+            !!is_full_member, // Convert to boolean
+            !!is_visiting, // Convert to boolean
+            location,
+            county_of_origin,
+            gender,
+            discipleship_class_id,
+            completed_class === true, // Ensure boolean value
+        ];
+
+        const memberResult = await pool.query(memberQuery, memberValues);
+        const memberId = memberResult.rows[0].member_id;
+
+        // Step 3: Insert next of kin into the next_of_kin table
+        if (next_of_kin && next_of_kin.first_name && next_of_kin.last_name && next_of_kin.contact_info) {
+            const nextOfKinQuery = `
+                INSERT INTO next_of_kin (member_id, first_name, last_name, contact_info)
+                VALUES ($1, $2, $3, $4);
+            `;
+
+            const nextOfKinValues = [
+                memberId,
+                next_of_kin.first_name,
+                next_of_kin.last_name,
+                next_of_kin.contact_info,
+            ];
+
+            await pool.query(nextOfKinQuery, nextOfKinValues);
+        }
+
+        // Step 4: Insert volunteering data into the volunteers table
+        if (volunteering && volunteering.role) {
+            // Get the next volunteer_id
+            const nextVolunteerIdResult = await pool.query('SELECT COALESCE(MAX(volunteer_id), 0) + 1 AS next_id FROM volunteers');
+            const nextVolunteerId = nextVolunteerIdResult.rows[0].next_id;
+
+            const volunteeringQuery = `
+                INSERT INTO volunteers (volunteer_id, member_id, role)
+                VALUES ($1, $2, $3);
+            `;
+
+            const volunteeringValues = [nextVolunteerId, memberId, volunteering.role];
+            await pool.query(volunteeringQuery, volunteeringValues);
+        }
+
+        res.status(201).json({
+            message: 'Member added successfully',
+            memberId,
+        });
+    } catch (error) {
+        console.error('Error adding member:', error.message);
+        res.status(500).json({ error: 'Failed to add member' });
+    }
+});
 
 // Get all members
 app.get('/api/members', async (req, res) => {
@@ -401,125 +520,6 @@ app.get('/api/members/residence3', async (req, res) => {
 });
 
 
-// Adding memeber 
-app.post('/api/members/add', async (req, res) => {
-    const {
-        sir_name,
-        middle_name,
-        last_name,
-        date_of_birth,
-        contact_info,
-        gender,
-        location,
-        county_of_origin,
-        occupation_status,
-        married_status,
-        is_visiting,
-        fellowship_ministries,
-        service_ministries,
-        is_full_member,
-        baptized,
-        conversion_date,
-        discipleship_class_id,
-        completed_class,
-        next_of_kin,
-        volunteering,
-    } = req.body;
-
-    try {
-        // Step 1: Get the next member_id
-        const nextMemberIdResult = await pool.query('SELECT COALESCE(MAX(member_id), 0) + 1 AS next_id FROM members');
-        const nextMemberId = nextMemberIdResult.rows[0].next_id;
-
-        // Step 2: Insert member into the members table
-        const memberQuery = `
-            INSERT INTO members (
-                member_id,
-                name,
-                contact_info,
-                date_of_birth,
-                married_status,
-                occupation_status,
-                fellowship_ministries,
-                service_ministries,
-                baptized,
-                conversion_date,
-                is_full_member,
-                is_visiting,
-                location,
-                county_of_origin,
-                gender,
-                discipleship_class_id,
-                completed_class,
-                membership_date
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
-            RETURNING member_id;
-        `;
-
-        const memberValues = [
-            nextMemberId,
-            `${sir_name} ${middle_name} ${last_name}`.trim(),
-            contact_info,
-            date_of_birth,
-            married_status,
-            occupation_status,
-            fellowship_ministries,
-            service_ministries,
-            !!baptized, // Convert to boolean
-            conversion_date,
-            !!is_full_member, // Convert to boolean
-            !!is_visiting, // Convert to boolean
-            location,
-            county_of_origin,
-            gender,
-            discipleship_class_id,
-            completed_class === true, // Ensure boolean value
-        ];
-
-        const memberResult = await pool.query(memberQuery, memberValues);
-        const memberId = memberResult.rows[0].member_id;
-
-        // Step 3: Insert next of kin into the next_of_kin table
-        if (next_of_kin && next_of_kin.first_name && next_of_kin.last_name && next_of_kin.contact_info) {
-            const nextOfKinQuery = `
-                INSERT INTO next_of_kin (member_id, first_name, last_name, contact_info)
-                VALUES ($1, $2, $3, $4);
-            `;
-
-            const nextOfKinValues = [
-                memberId,
-                next_of_kin.first_name,
-                next_of_kin.last_name,
-                next_of_kin.contact_info,
-            ];
-
-            await pool.query(nextOfKinQuery, nextOfKinValues);
-        }
-
-        // Step 4: Insert volunteering data into the volunteers table
-        if (volunteering && volunteering.role) {
-            // Get the next volunteer_id
-            const nextVolunteerIdResult = await pool.query('SELECT COALESCE(MAX(volunteer_id), 0) + 1 AS next_id FROM volunteers');
-            const nextVolunteerId = nextVolunteerIdResult.rows[0].next_id;
-
-            const volunteeringQuery = `
-                INSERT INTO volunteers (volunteer_id, member_id, role)
-                VALUES ($1, $2, $3);
-            `;
-
-            const volunteeringValues = [nextVolunteerId, memberId, volunteering.role];
-            await pool.query(volunteeringQuery, volunteeringValues);
-        }
-
-        res.status(201).json({
-            message: 'Member added successfully',
-            memberId,
-        });
-    } catch (error) {
-        console.error('Error adding member:', error.message);
-        res.status(500).json({ error: 'Failed to add member' });
-    }
-});
 
 // members who are just visting 
 app.get('/api/just-visiting', async (req, res) => {
