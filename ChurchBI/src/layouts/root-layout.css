@@ -1,27 +1,89 @@
 .root-layout {
-    display: flex;
+  --width-side-bar:15.625rem;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    background-color: #D9D9D9;
     height: 100vh;
     overflow: hidden;
   }
   
   .side-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 250px;
     height: 100vh;
     overflow-y: scroll;
     background-color: #070000;
+    background-repeat: no-repeat;
+   
   }
+  .sidebar-content{
+    position: relative;
+    z-index: 100;
+
+  }
+
+  .sidebar-content.hiddenSidebar{
+    width: 0;
+  }
+
+  .sidebar-content.visibleSidebar{
+    width: var(--width-side-bar);
+  }
+
+ 
+
+  .toggle-siderbar-btn{
+    position: absolute;
+    top: 50%;
+    right: -40px;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 40px;
+    background-color:#313131;
+    opacity: 0;
+    transition-property: opacity;
+    /* z-index: 10000000; */
+    border: none;
+    border-radius: .6rem;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  }
+  .sidebar-content::after{
+    position: absolute;
+    content: "";
+    width: 20px;
+    height: 100%;
+    background-color:#313131;
+    right: -20px;
+    top: 0;
+    bottom: 0;
+    opacity: 0;
+    transition-property: opacity;
+    
+  }
+/*  hover for all btn and after element*/
+.sidebar-content:hover::after,
+.sidebar-content:hover .toggle-siderbar-btn {
+  opacity: 1;
+}
+.sidebar-content:hover::after,
+.sidebar-content:hover .toggle-siderbar-btn {
+  transition-timing-function: ease-in-out;
+  transition-duration: .5s;
+}
   
+
   .main-content {
-    margin-left: 260px;
-    flex-grow: 1;
     height: 100vh;
     overflow-y: auto;
+    background-color: #D9D9D9;
+    grid-column: 2;
+    grid-row: 1;
   }
   .ps-sidebar-root{
     background-color: #070000;
   }
 
-
+ 

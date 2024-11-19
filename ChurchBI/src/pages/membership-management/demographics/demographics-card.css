@@ -1,0 +1,35 @@
+*,
+*::after,
+*::before {
+    box-sizing: border-box;
+}
+
+.demographic-main-container {
+  padding: 1em;
+}
+
+.demographic-container {
+ display: grid;
+ width: 100%;
+ gap: 2rem;
+  
+}
+
+.left-demo-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    max-width: 80rem;
+}
+
+
+.shape-container{
+
+  border-radius:1em ;
+  background-color: white;
+}
+@media(min-width:80rem){
+  .left-demo-content{
+    width: 100%;
+  }
+}

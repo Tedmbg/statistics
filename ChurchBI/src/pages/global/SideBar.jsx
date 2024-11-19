@@ -10,28 +10,34 @@ import SailingIcon from '@mui/icons-material/Sailing';
 import GridViewIcon from '@mui/icons-material/GridView';
 import ArrowRightOutlinedIcon from '@mui/icons-material/ArrowRightOutlined';
 
-export default function SideBar() {
+export default function SideBar(isvisible) {
   const location = useLocation();
   
   const checkActive = (path) => {
     return location.pathname === path;
   };
 
+  console.log(isvisible.isvisible)
   
 
   return (
     <Sidebar
       style={{
-        position: "fixed", 
+
+        position:"sticky",
         left: 0,
         top: 0,
         height: "100vh",
-        width: "250px", 
-        zIndex: 1000,
+        display:isvisible.isvisible? "block":"none",
+        transitionProperty:"display",
+        transitionTimingFunction:"ease-in-out",
+        transitionDuration:"5s"
+
       }}
       backgroundColor="primary"
       border="none"
-      color="#A9A7A7"        
+      color="#A9A7A7"   
+           
     >
 
       <Typography 
@@ -82,6 +88,13 @@ export default function SideBar() {
             icon={<ArrowRightOutlinedIcon />}
           >
             Add Member
+          </MenuItem>
+          <MenuItem
+            component={<NavLink to="baptism" />}
+            active={checkActive("/baptism")}
+            icon={<ArrowRightOutlinedIcon />}
+          >
+            Baptism
           </MenuItem>
           <MenuItem
             component={<NavLink to="attendance" />}

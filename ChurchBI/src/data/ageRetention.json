@@ -1,0 +1,11 @@
+{
+    "labels": ["18 - 25", "26 - 32", "33 - 45", "45+"],
+    "datasets": [
+      {
+        "label": "Age Distribution",
+        "data": [20, 30, 25, 25],
+        "backgroundColor": ["#ffbb28", "#ff8042", "#0088fe", "#00c49f"]
+      }
+    ]
+  }
+  

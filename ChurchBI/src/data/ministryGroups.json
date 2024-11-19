@@ -1,0 +1,33 @@
+[
+    {
+      "name": "Ushering",
+      "leader": "John kimani",
+      "label": "mb .12",
+      "avatar": "path/to/avatar1.jpg"
+    },
+    {
+      "name": "Teens",
+      "leader": "Lady john",
+      "label": "mb .16",
+      "avatar": "path/to/avatar2.jpg"
+    },
+    {
+      "name": "Media/ Sound",
+      "leader": "Zack Chesoni",
+      "label": "mb .19",
+      "avatar": "path/to/avatar3.jpg"
+    },
+    {
+      "name": "Traffic",
+      "leader": "Shem mustafa",
+      "label": "mb .22",
+      "avatar": "path/to/avatar4.jpg"
+    },
+    {
+      "name": "Counselling",
+      "leader": "Jane rotich",
+      "label": "mb .23",
+      "avatar": "path/to/avatar5.jpg"
+    }
+  ]
+  
