@@ -5,6 +5,7 @@ import BarChart from "../../../components/BarChart";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import CardThreeRow from "../../../components/CardThreeRow";
 import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 
 const barOptions = {
   responsive: true,
@@ -31,8 +32,7 @@ function Baptism() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const theme = useTheme();
 
-  // Combined loading state
-  const isLoading = isLoadingCount || isLoadingData;
+  const isLoading = isLoadingCount || isLoadingData;//if both are loading
 
   useEffect(() => {
     setIsLoadingCount(true);
@@ -71,6 +71,11 @@ function Baptism() {
       },
     ],
   };
+
+  const handleAddMember = () => {
+    Navigate("/addmember");
+  };
+
 
   return (
     <div style={{ padding: "0 1rem" }}>
@@ -118,6 +123,7 @@ function Baptism() {
               <div>
                 <Button
                   variant="outlined"
+                  onClick={handleAddMember}
                   startIcon={<AddCircleIcon sx={{ color: "white" }} />}
                   sx={{
                     backgroundColor: "#3a85fe",

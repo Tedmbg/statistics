@@ -29,14 +29,14 @@ export const fetchDemographicData = async () => {
       fetch("https://statistics-production-032c.up.railway.app/api/members/county-origin").then((res) => res.json())
 
     ]);
-
+    
     return {
       ageDistribution: {
         labels: ageDistributionRes.map((item)=>item.age_range),
         datasets: [
           {
             data: ageDistributionRes.map((item)=>item.count),
-            backgroundColor: ["#f8766d", "#7bbf5e", "#f0a500", "#b4b7c6"]
+            backgroundColor: ["#EE5C6C", "#8D78EB", "#3A85FE", "#EF5315","#FCBD0E","#FFD712","#64F0FE","#63FC8A"]
           }
         ]
       },
@@ -75,7 +75,7 @@ export const fetchDemographicData = async () => {
         datasets: [
           {
             data: genderDistributionRes.map((item)=>item.count),
-            backgroundColor: ["#4a90e2", "#f55a4e"]
+            backgroundColor: ["#8D78EB", "#3A85FE"]
           }
         ]
       },
@@ -84,7 +84,7 @@ export const fetchDemographicData = async () => {
         datasets: [
           {
             data: maritalStatusRes.map((item)=>item.count),
-            backgroundColor: ["#4a90e2", "#f55a4e","#f55a4e","#f55a4e"]
+            backgroundColor: ["#64F0FE", "#3A85FE","#8D78EB","#63FC8A"]
           }
         ]
       },
