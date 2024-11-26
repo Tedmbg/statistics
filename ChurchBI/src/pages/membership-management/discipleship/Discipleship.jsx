@@ -294,7 +294,7 @@ export default function Discipleship() {
       {/* Charts Section */}
       <Grid container spacing={2} mt={2}>
         {/* Completed Discipleship - Bar Chart */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={12}>
           <Card sx={{ height: 730, backgroundColor: "#FFFFFF" }}>
             <BarChart
               data={barChartData}
@@ -303,25 +303,6 @@ export default function Discipleship() {
               onDateChange={handleDateChange}
             />
           </Card>
-        </Grid>
-
-        {/* Disciples Classes - Donut Chart */}
-        <Grid item xs={12} md={4}>
-          <Box backgroundColor="#FFFFFF" pt={1} pl={3}>
-            <Typography variant="h6">Total Completed Discipleship</Typography>
-            <Card
-              sx={{
-                height: 600,
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                backgroundColor: "#FFFFFF",
-                boxShadow: "none",
-              }}
-            >
-              <DoughnutC data={doughnutData} options={doughnutOptions} />
-            </Card>
-          </Box>
         </Grid>
       </Grid>
 
