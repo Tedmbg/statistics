@@ -12,32 +12,123 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import axios from "axios";
 
 function AddMemberForm({ initialData }) {
   const [memberToDelete, setMemberToDelete] = useState(null)
   const [members, setMembers] = useState()
-  const [fellowshipCategory, setFellowshipCategory] = useState("");
-  const [fellowshipRole, setFellowshipRole] = useState("");
-  const [serviceCategory, setServiceCategory] = useState("");
-  const [serviceRole, setServiceRole] = useState("");
+  // const [fellowshipCategory, setFellowshipCategory] = useState("");
+  // const [fellowshipRole, setFellowshipRole] = useState("");
+  // const [serviceCategory, setServiceCategory] = useState("");
+  // const [serviceRole, setServiceRole] = useState(""); 
+
+  const [formData, setFormData] = useState({
+    firstName: initialData?.firstName || "",
+    middleName: initialData?.middleName || "",
+    lastName: initialData?.lastName || "",
+    dob: initialData?.dob || "",
+    contactInfo: initialData?.contactInfo || "",
+    gender: "",
+    location: "",
+    countyOfOrigin: "",
+    occupationStatus: "",
+    marriedStatus: "",
+    isVisiting: false,
+    isFullMember: false,
+    baptized: false,
+    discipleshipClassId: null,
+    completedClass: false,
+    fellowshipCategory: "",
+    fellowshipRole: "",
+    serviceCategory: "",
+    serviceRole: "",
+    conversionDate: '', // New field
+    nextOfKinFirstName: '',
+    nextOfKinLastName: '',
+    nextOfKinContactInfo: '',
+    volunteeringRole: '',
+  });
+
+  const handleInputChange = (field, value) => {
+    console.log(`Updating ${field} with value: ${value}`);
+    let newValue = value;
   
-  const handleFellowshipCategoryChange = (event) => {
-    setFellowshipCategory(event.target.value);
-    setFellowshipRole(""); // Reset role when category changes
+    if (field === 'discipleshipClassId') {
+      newValue = value ? parseInt(value, 10) : null;
+    }
+  
+    setFormData((prev) => ({ ...prev, [field]: newValue }));
   };
   
-  const handleFellowshipRoleChange = (event) => {
-    setFellowshipRole(event.target.value);
+
+  const discipleshipClasses = [
+    { id: 1, name: "Group 345B" },
+    { id: 2, name: "Group 456Y" },
+    { id: 3, name: "Group 789Z" },
+  ];
+  
+  
+
+  const handleSubmit = async () => {
+    try {
+      // Prepare data for the API
+      const payload = {
+        sir_name: formData.firstName,
+        middle_name: formData.middleName,
+        last_name: formData.lastName,
+        date_of_birth: formData.dob || null,
+        contact_info: formData.contactInfo,
+        gender: formData.gender,
+        location: formData.location,
+        county_of_origin: formData.countyOfOrigin,
+        occupation_status: formData.occupationStatus,
+        married_status: formData.marriedStatus,
+        is_visiting: formData.isVisiting,
+        fellowship_ministries: formData.fellowshipRole,
+        service_ministries: formData.serviceRole,
+        is_full_member: formData.isFullMember,
+        baptized: formData.baptized,
+        conversion_date: formData.conversionDate || null, // Add this line
+        discipleship_class_id: formData.discipleshipClassId,
+        completed_class: formData.completedClass,
+        next_of_kin: {
+          first_name: formData.nextOfKinFirstName || '',
+          last_name: formData.nextOfKinLastName || '',
+          contact_info: formData.nextOfKinContactInfo || '',
+        },
+        volunteering: {
+          fellowshipRole: formData.fellowshipRole || '',
+          serviceRole: formData.serviceRole || '',
+        },        
+      };
+      
+
+      // Call the API
+      const response = await axios.post('https://statistics-production-032c.up.railway.app/api/members/add', payload);
+      alert(`Member added successfully with ID: ${response.data.memberId}`);
+    } catch (error) {
+      console.error("Error submitting form:", error.response?.data || error.message);
+      alert("Failed to add member. Please try again.");
+    }
   };
   
-  const handleServiceCategoryChange = (event) => {
-    setServiceCategory(event.target.value);
-    setServiceRole(""); // Reset role when category changes
-  };
+  // const handleFellowshipCategoryChange = (event) => {
+  //   setFellowshipCategory(event.target.value);
+  //   setFellowshipRole(""); // Reset role when category changes
+  // };
   
-  const handleServiceRoleChange = (event) => {
-    setServiceRole(event.target.value);
-  };
+  // const handleFellowshipRoleChange = (event) => {
+  //   setFellowshipRole(event.target.value);
+  // };
+  
+  // const handleServiceCategoryChange = (event) => {
+  //   setServiceCategory(event.target.value);
+  //   setServiceRole(""); // Reset role when category changes
+  // };
+  
+  // const handleServiceRoleChange = (event) => {
+  //   setServiceRole(event.target.value);
+  // };
   
 
   const ministryData = {
@@ -94,19 +185,56 @@ function AddMemberForm({ initialData }) {
                         <Box sx={{ marginTop: '1rem' }}>
                             <Grid container spacing={2}>
                                 <Grid item xs={12} md={4}>
-                                    <TextField fullWidth label="First Name" variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }} defaultValue={initialData?.firstName || ''} />
+                                            <TextField
+                                      fullWidth
+                                      label="First Name"
+                                      variant="outlined"
+                                      sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                                      value={formData.firstName}
+                                      onChange={(e) => handleInputChange("firstName", e.target.value)}
+                                    />
                                 </Grid>
                                 <Grid item xs={12} md={4}>
-                                    <TextField fullWidth label="Middle Name" variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }} defaultValue={initialData?.middleName || ''} />
+                                    <TextField
+                                    fullWidth
+                                    label="Middle Name"
+                                    variant="outlined"
+                                    sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                                    value={formData.middleName}
+                                    onChange={(e) => handleInputChange("middleName", e.target.value)}
+                                  />
                                 </Grid>
                                 <Grid item xs={12} md={4}>
-                                    <TextField fullWidth label="Last Name" variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }} defaultValue={initialData?.lastName || ''} />
+                                <TextField
+                                fullWidth
+                                label="Last Name"
+                                variant="outlined"
+                                sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                                value={formData.lastName}
+                                onChange={(e) => handleInputChange("lastName", e.target.value)}
+                              />
                                 </Grid>
                                 <Grid item xs={12} md={4}>
-                                    <TextField fullWidth label="DOB" type="date" InputLabelProps={{ shrink: true }} variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }} defaultValue={initialData?.dob || ''} />
+                                <TextField
+                                fullWidth
+                                label="DOB"
+                                type="date"
+                                InputLabelProps={{ shrink: true }}
+                                variant="outlined"
+                                sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                                value={formData.dob}
+                                onChange={(e) => handleInputChange("dob", e.target.value)}
+                              />
                                 </Grid>
                                 <Grid item xs={12} md={4}>
-                                    <TextField fullWidth label="Contact Info (+254)" variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }} defaultValue={initialData?.contactInfo || ''} />
+                                <TextField
+                                fullWidth
+                                label="Contact Info (+254)"
+                                variant="outlined"
+                                sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                                value={formData.contactInfo}
+                                onChange={(e) => handleInputChange("contactInfo", e.target.value)}
+                              />
                                 </Grid>
                             </Grid>
                         </Box>
@@ -122,16 +250,22 @@ function AddMemberForm({ initialData }) {
                 <Grid item xs={12} md={4}>
                   <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
                     <InputLabel>Gender</InputLabel>
-                    <Select label="Gender">
-                      <MenuItem value="Male">Male</MenuItem>
-                      <MenuItem value="Female">Female</MenuItem>
-                    </Select>
+                    <Select
+                    value={formData.gender}
+                    onChange={(e) => handleInputChange("gender", e.target.value)}
+                  >
+                    <MenuItem value="Male">Male</MenuItem>
+                    <MenuItem value="Female">Female</MenuItem>
+                  </Select>
                   </FormControl>
                 </Grid>
                 <Grid item xs={12} md={4}>
   <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
     <InputLabel>Residence</InputLabel>
-    <Select label="Residence">
+    <Select
+        value={formData.location}
+        onChange={(e) => handleInputChange("location", e.target.value)}
+      >
       <MenuItem value="Zimmerman">Zimmerman</MenuItem>
       <MenuItem value="Kasarani">Kasarani</MenuItem>
       <MenuItem value="Garden Estate">Garden Estate</MenuItem>
@@ -149,14 +283,22 @@ function AddMemberForm({ initialData }) {
 </Grid>
 
                 <Grid item xs={12} md={4}>
-                  <TextField fullWidth label="County of Origin" variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }} />
+                <TextField
+                fullWidth
+                label="County of Origin"
+                variant="outlined"
+                sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                value={formData.countyOfOrigin}
+                onChange={(e) => handleInputChange("countyOfOrigin", e.target.value)}
+              />
                 </Grid>
                 <Grid item xs={12} md={4}>
   <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
     <InputLabel>Occupation</InputLabel>
-    <Select label="Occupation">
-      {/* General Status 
-      Under each of the general types of occupation below are examples which can help guide the selection based on the occupation.*/}
+                  <Select
+                value={formData.occupationStatus}
+                onChange={(e) => handleInputChange("occupationStatus", e.target.value)}
+              >
      
      
 
@@ -196,7 +338,10 @@ function AddMemberForm({ initialData }) {
                 <Grid item xs={12} md={4}>
                   <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
                     <InputLabel>Marriage Status</InputLabel>
-                    <Select label="Marriage Status">
+                    <Select
+                    value={formData.marriedStatus}
+                    onChange={(e) => handleInputChange("marriedStatus", e.target.value)}
+                  >
                       <MenuItem value="Married">Married</MenuItem>
                       <MenuItem value="Single">Single</MenuItem>
                       <MenuItem value="Divorced">Divorced</MenuItem>
@@ -207,9 +352,14 @@ function AddMemberForm({ initialData }) {
                 <Grid item xs={12} md={4}>
                   <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
                     <InputLabel>Visitors</InputLabel>
-                    <Select label="Occupation Status">
-                      <MenuItem value="Employed">Just Visiting</MenuItem>
-                      <MenuItem value="Unemployed">Aspiring member</MenuItem>
+                    <Select
+                    value={formData.isVisiting ? "Visiting" : "Aspiring Member"}
+                    onChange={(e) =>
+                      handleInputChange("isVisiting", e.target.value === "Visiting")
+                    }
+                  >
+                      <MenuItem value="Visiting">Just Visiting</MenuItem>
+                      <MenuItem value="Aspiring Member">Aspiring Member</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -225,13 +375,34 @@ function AddMemberForm({ initialData }) {
             <Box sx={{ marginTop: '1rem' }}>
               <Grid container spacing={2}>
                 <Grid item xs={12} md={4}>
-                  <TextField fullWidth label="First Name" variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }} />
+                <TextField
+                fullWidth
+                label="Next of Kin First Name"
+                variant="outlined"
+                sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                value={formData.nextOfKinFirstName}
+                onChange={(e) => handleInputChange("nextOfKinFirstName", e.target.value)}
+              />
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <TextField fullWidth label="Last Name" variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }} />
+                <TextField
+                fullWidth
+                label="Next of Kin Last Name"
+                variant="outlined"
+                sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                value={formData.nextOfKinLastName}
+                onChange={(e) => handleInputChange("nextOfKinLastName", e.target.value)}
+              />
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <TextField fullWidth label="Contact Info (+254)" variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }} />
+                <TextField
+                fullWidth
+                label="Next of Kin Contact Info"
+                variant="outlined"
+                sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                value={formData.nextOfKinContactInfo}
+                onChange={(e) => handleInputChange("nextOfKinContactInfo", e.target.value)}
+              />
                 </Grid>
               </Grid>
             </Box>
@@ -252,11 +423,12 @@ function AddMemberForm({ initialData }) {
                     >
                       <Typography variant="body1" sx={{ fontSize: '1.2rem' }}> {/* Increase text size */}
                         <label style={{ display: 'flex', alignItems: 'center' }}>
-                          <input 
-                            type="checkbox" 
-                            style={{ width: '20px', height: '20px', transform: 'scale(1.5)', marginRight: '8px', marginTop: '15px',marginLeft:'16px', textAlign:'justify'}} // Increase checkbox size
-                          /> 
-                         Is a Full Member?
+                        <input
+                        type="checkbox"
+                        style={{ width: '20px', height: '20px', transform: 'scale(1.5)', marginRight: '8px', marginTop: '15px',marginLeft:'16px', textAlign:'justify'}} // Increase checkbox size
+                        checked={formData.isFullMember}
+                        onChange={(e) => handleInputChange("isFullMember", e.target.checked)}
+                      /> Is a Full Member?
                         </label>
                       </Typography>
                     </FormControl>
@@ -269,11 +441,12 @@ function AddMemberForm({ initialData }) {
                     >
                       <Typography variant="body1" sx={{ fontSize: '1.2rem' }}> {/* Increase text size */}
                         <label style={{ display: 'flex', alignItems: 'center' }}>
-                          <input 
-                            type="checkbox" 
-                            style={{ width: '20px', height: '20px', transform: 'scale(1.5)', marginRight: '8px', marginTop: '15px',marginLeft:'16px', textAlign:'justify'}} // Increase checkbox size
-                          /> 
-                         Baptised?
+                        <input
+                        type="checkbox"
+                        style={{ width: '20px', height: '20px', transform: 'scale(1.5)', marginRight: '8px', marginTop: '15px',marginLeft:'16px', textAlign:'justify'}} // Increase checkbox size
+                        checked={formData.baptized}
+                        onChange={(e) => handleInputChange("baptized", e.target.checked)}
+                      /> Baptized?
                         </label>
                       </Typography>
                     </FormControl>
@@ -291,12 +464,18 @@ function AddMemberForm({ initialData }) {
           <Typography variant="h6">Discipleship Class</Typography>
           <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff', marginTop: '1rem' }}>
             <InputLabel>Class</InputLabel>
-            <Select label="Discipleship Class">
-            <MenuItem value="Group 345A">None</MenuItem>
-              <MenuItem value="Group 345B">Group 345B</MenuItem>
-              <MenuItem value="Group 456Y">Group 456Y</MenuItem>
-              <MenuItem value="Group 789Z">Group 789Z</MenuItem>
-            </Select>
+            <Select
+            label="Discipleship Class"
+            value={formData.discipleshipClassId !== null ? formData.discipleshipClassId : ''}
+            onChange={(e) => handleInputChange("discipleshipClassId", e.target.value)}
+          >
+            <MenuItem value="">None</MenuItem>
+            {discipleshipClasses.map((cls) => (
+              <MenuItem key={cls.id} value={cls.id}>
+                {cls.name}
+              </MenuItem>
+            ))}
+          </Select>
           </FormControl>
         </Grid>
 
@@ -305,7 +484,13 @@ function AddMemberForm({ initialData }) {
           <Typography variant="h6">Completed Class</Typography>
           <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff', marginTop: '1rem' }}>
             <InputLabel>Completed</InputLabel>
-            <Select label="Completed Class">
+            <Select
+            label="Completed Class"
+            value={formData.completedClass ? "Yes" : "No"} // Map boolean to string
+            onChange={(e) =>
+              handleInputChange("completedClass", e.target.value === "Yes")
+            } // Convert "Yes"/"No" to boolean
+          >
               <MenuItem value="Yes">Yes</MenuItem>
               <MenuItem value="No">No</MenuItem>
             </Select>
@@ -330,36 +515,38 @@ function AddMemberForm({ initialData }) {
     sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem" }}
   >
     <InputLabel>Category</InputLabel>
-    <Select
-      value={fellowshipCategory}
-      onChange={handleFellowshipCategoryChange}
-      label="Category"
-    >
-      {Object.keys(ministryData["Fellowship Ministry"].categories).map((category, index) => (
-        <MenuItem key={index} value={category}>
-          {category}
-        </MenuItem>
-      ))}
-    </Select>
+          <Select
+        value={formData.fellowshipCategory}
+        onChange={(e) => handleInputChange("fellowshipCategory", e.target.value)}
+      >
+        {Object.keys(ministryData["Fellowship Ministry"].categories).map(
+          (category) => (
+            <MenuItem key={category} value={category}>
+              {category}
+            </MenuItem>
+          )
+        )}
+      </Select>
   </FormControl>
   <FormControl
     fullWidth
     variant="outlined"
     sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem" }}
-    disabled={!fellowshipCategory}
+    disabled={!formData.fellowshipCategory}
   >
     <InputLabel>Role</InputLabel>
-    <Select
-      value={fellowshipRole}
-      onChange={handleFellowshipRoleChange}
-      label="Role"
+        <Select
+      value={formData.fellowshipRole}
+      onChange={(e) => handleInputChange("fellowshipRole", e.target.value)}
+      disabled={!formData.fellowshipCategory}
     >
-      {fellowshipCategory &&
-        ministryData["Fellowship Ministry"].categories[fellowshipCategory]?.map((role, index) => (
-          <MenuItem key={index} value={role}>
-            {role}
-          </MenuItem>
-        ))}
+      {ministryData["Fellowship Ministry"].categories[
+        formData.fellowshipCategory
+      ]?.map((role) => (
+        <MenuItem key={role} value={role}>
+          {role}
+        </MenuItem>
+      ))}
     </Select>
   </FormControl>
 </Grid>
@@ -376,13 +563,12 @@ function AddMemberForm({ initialData }) {
     sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem" }}
   >
     <InputLabel>Category</InputLabel>
-    <Select
-      value={serviceCategory}
-      onChange={handleServiceCategoryChange}
-      label="Category"
+        <Select
+      value={formData.serviceCategory}
+      onChange={(e) => handleInputChange("serviceCategory", e.target.value)}
     >
-      {Object.keys(ministryData["Service Ministry"].categories).map((category, index) => (
-        <MenuItem key={index} value={category}>
+      {Object.keys(ministryData["Service Ministry"].categories).map((category) => (
+        <MenuItem key={category} value={category}>
           {category}
         </MenuItem>
       ))}
@@ -392,21 +578,22 @@ function AddMemberForm({ initialData }) {
     fullWidth
     variant="outlined"
     sx={{ borderRadius: "8px", backgroundColor: "#ffffff" }}
-    disabled={!serviceCategory}
+    disabled={!formData.serviceCategory}
   >
     <InputLabel>Role</InputLabel>
-    <Select
-      value={serviceRole}
-      onChange={handleServiceRoleChange}
-      label="Role"
-    >
-      {serviceCategory &&
-        ministryData["Service Ministry"].categories[serviceCategory]?.map((role, index) => (
-          <MenuItem key={index} value={role}>
-            {role}
-          </MenuItem>
-        ))}
-    </Select>
+          <Select
+        value={formData.serviceRole}
+        onChange={(e) => handleInputChange("serviceRole", e.target.value)}
+        disabled={!formData.serviceCategory}
+      >
+        {ministryData["Service Ministry"].categories[formData.serviceCategory]?.map(
+          (role) => (
+            <MenuItem key={role} value={role}>
+              {role}
+            </MenuItem>
+          )
+        )}
+      </Select>
   </FormControl>
 </Grid>
 
@@ -418,11 +605,18 @@ function AddMemberForm({ initialData }) {
         
     
       </Grid>
+    
       <Box sx={{ textAlign: 'right', marginTop: '2rem', marginRight: '1.9rem' }}>
-        <Button variant="contained"  sx={{ padding: '0.5rem 2rem', backgroundColor:"#3a85fe" }}>
+        <Button
+          variant="contained"
+          sx={{ padding: '0.5rem 2rem', backgroundColor: "#3a85fe" }}
+          onClick={handleSubmit}
+        >
           Submit
         </Button>
       </Box>
+      
+      
    
 
       <AlertDialog open={!!memberToDelete} onOpenChange={() => setMemberToDelete(null)}>
