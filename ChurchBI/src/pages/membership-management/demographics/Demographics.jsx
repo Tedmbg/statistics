@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 
 // datus
 import { fetchDemographicData } from "./demographicData";
+import { Navigate } from "react-router-dom";
 
 const boxStyle = {
   padding: "2em 1em",

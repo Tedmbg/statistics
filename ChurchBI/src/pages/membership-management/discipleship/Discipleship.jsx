@@ -1,3 +1,4 @@
+import  { useState } from "react";
 import {
   Box,
   Grid,
@@ -10,20 +11,60 @@ import {
   MenuItem,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import AddIcon from "@mui/icons-material/Add";
 import AbsenteeList from "./AbsenteeList";
 import BarChart from "../../../components/BarChart";
 import DoughnutC from "../../../components/DoughnutC";
+import { createClass } from "../../../data/createClass";
 
-
-// automate name calling
-function generateClassName(){
-  let className = "ICC" ;
-  let number = Math.round(Math.random() * 100) + 100
-  let fullName = `${className}${number}`
-  return fullName
-}
+// Function to generate a random class name
+const generateClassName = () => {
+  const className = "ICC";
+  const number = Math.floor(Math.random() * 100) + 100; // Use floor for integer
+  return `${className}${number}`;
+};
 
 export default function Discipleship() {
+  // State for form data
+  const [formData, setFormData] = useState({
+    class_name: generateClassName(),
+    instructor: "",
+    creation_date: "",
+    end_date: "",
+    description: "",
+    type: "Virtual",
+  });
+
+  // Handle input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  // Handle form submission
+  const handleSubmit = async () => {
+    try {
+      const result = await createClass(formData);
+      console.log("Class created successfully:", result);
+      // Reset form or show success message
+      setFormData({
+        class_name: generateClassName(),
+        instructor: "",
+        creation_date: "",
+        end_date: "",
+        description: "",
+        type: "Virtual",
+      });
+    } catch (error) {
+      console.error("Error creating class:", error);
+      // Show error message
+    }
+  };
+
+  // Sample chart data and options
   const barChartData = {
     labels: [
       "Jan",
@@ -55,7 +96,7 @@ export default function Discipleship() {
 
   const barChartOptions = {
     responsive: true,
-    maintainAspectRatio: false, // Allow the chart to fill its container
+    maintainAspectRatio: false,
     scales: {
       x: { stacked: true },
       y: {
@@ -78,12 +119,20 @@ export default function Discipleship() {
 
   const doughnutOptions = {
     responsive: true,
-    maintainAspectRatio: false, // Allow the chart to fill its container
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: "bottom",
       },
     },
+  };
+
+  // Placeholder function for date change handling
+  const handleDateChange = (newDate) => {
+    // Implement data fetching based on the newDate
+    // For example:
+    // const updatedData = fetchDataForYear(newDate);
+    // setBarChartData(updatedData);
   };
 
   return (
@@ -96,68 +145,84 @@ export default function Discipleship() {
         {/* Left Section - Form */}
         <Grid item xs={12} md={8}>
           <Grid container spacing={10}>
+            {/* Class Name */}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="ClassName"
+                label="Class Name"
                 variant="outlined"
-                defaultValue={generateClassName()}
+                name="class_name"
+                value={formData.class_name}
+                onChange={handleChange}
                 sx={{
-                  backgroundColor: "#FFFF",
+                  backgroundColor: "#FFFFFF",
                 }}
               />
             </Grid>
+
+            {/* Facilitator */}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Facilitator"
                 variant="outlined"
-                defaultValue="Name"
+                name="instructor"
+                value={formData.instructor}
+                onChange={handleChange}
                 sx={{
-                  backgroundColor: "#FFFF",
+                  backgroundColor: "#FFFFFF",
                 }}
-              >
-              </TextField>
+              />
             </Grid>
+
+            {/* Creation Date */}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Creation Date"
                 variant="outlined"
                 type="date"
-                sx={{
-                  backgroundColor: "#FFFF",
-                }}
+                name="creation_date"
+                value={formData.creation_date}
+                onChange={handleChange}
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
+
+            {/* End Date */}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="End Date"
                 variant="outlined"
                 type="date"
-                sx={{
-                  backgroundColor: "#FFFF",
-                }}
+                name="end_date"
+                value={formData.end_date}
+                onChange={handleChange}
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
+
+            {/* Type */}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Type"
                 variant="outlined"
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
                 select
-                defaultValue="Virtual"
                 sx={{
-                  backgroundColor: "#FFFF",
+                  backgroundColor: "#FFFFFF",
                 }}
               >
                 <MenuItem value="Virtual">Virtual</MenuItem>
                 <MenuItem value="In-person">In-person</MenuItem>
               </TextField>
             </Grid>
+
+            {/* Submit Button */}
             <Grid
               item
               xs={12}
@@ -168,7 +233,8 @@ export default function Discipleship() {
             >
               <Button
                 variant="contained"
-                startIcon={<span>+</span>}
+                onClick={handleSubmit}
+                startIcon={<AddIcon />}
                 sx={{
                   backgroundColor: "#3A85FE",
                   "&:hover": {
@@ -184,6 +250,7 @@ export default function Discipleship() {
 
         {/* Right Section - Search & Discipleship Classes */}
         <Grid item xs={12} md={4}>
+          {/* Search Field */}
           <TextField
             fullWidth
             variant="outlined"
@@ -195,11 +262,11 @@ export default function Discipleship() {
                 </InputAdornment>
               ),
             }}
-            sx={{ marginBottom: "1rem" ,  backgroundColor:"#fff"}}
+            sx={{ marginBottom: "1rem", backgroundColor: "#FFFFFF" }}
           />
 
           {/* Discipleship Classes List */}
-          <Card sx={{ padding: "1rem" ,backgroundColor:"#FFF"}}>
+          <Card sx={{ padding: "1rem", backgroundColor: "#FFFFFF" }}>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
               Discipleship Classes
             </Typography>
@@ -227,42 +294,20 @@ export default function Discipleship() {
       {/* Charts Section */}
       <Grid container spacing={2} mt={2}>
         {/* Completed Discipleship - Bar Chart */}
-        <Grid item xs={12} md={8}>
-          <Card sx={{ height: 630 ,backgroundColor:"#FFF" }}>
+        <Grid item xs={12} md={12}>
+          <Card sx={{ height: 730, backgroundColor: "#FFFFFF" }}>
             <BarChart
               data={barChartData}
               options={barChartOptions}
               title="Completed Discipleship"
+              onDateChange={handleDateChange}
             />
           </Card>
         </Grid>
-
-        {/* Disciples Classes - Donut Chart */}
-        <Grid item xs={12} md={3.5}>
-          <Box
-          backgroundColor="#FFF"
-          pt={1}
-          pl={3}
-          >
-          <Typography variant="h6">Total completed Discipleship</Typography>
-          <Card
-            sx={{
-              height: 600,
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              backgroundColor:"#FFF",
-              boxShadow:"none"
-            }}
-          >
-            <DoughnutC data={doughnutData} options={doughnutOptions} />
-          </Card>
-          </Box>
-        </Grid>
       </Grid>
 
-         {/* Absentees List */}
-         <Box mt={4}>
+      {/* Absentees List */}
+      <Box mt={4}>
         <AbsenteeList />
       </Box>
     </Box>
