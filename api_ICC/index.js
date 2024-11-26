@@ -640,6 +640,35 @@ app.get('/api/discipleship-classes2', async (req, res) => {
 
 
 
+//generateUniqueClassName
+app.get('/api/generate-class-name', async (req, res) => {
+    const prefix = "ICC";
+    let className;
+    let isUnique = false;
+  
+    try {
+      while (!isUnique) {
+        const number = Math.floor(Math.random() * 100) + 100; // Random number between 100 and 199
+        className = `${prefix}${number}`;
+  
+        // Query the database to check if this class name already exists
+        const result = await pool.query(
+          `SELECT COUNT(*) FROM discipleship_classes WHERE class_name = $1`,
+          [className]
+        );
+  
+        if (parseInt(result.rows[0].count, 10) === 0) {
+          isUnique = true; // Name is unique
+        }
+      }
+  
+      res.status(200).json({ className }); // Send the unique class name
+    } catch (error) {
+      console.error("Error generating class name:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
+  
 
 // Add Discipleship Class API
 app.post('/api/discipleship-classes_add', async (req, res) => {
