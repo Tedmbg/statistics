@@ -10,7 +10,9 @@ import {
   Avatar,
   InputAdornment,
   MenuItem,
-  CircularProgress, // Import CircularProgress
+  CircularProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
@@ -18,7 +20,13 @@ import AbsenteeList from "./AbsenteeList";
 import BarChart from "../../../components/BarChart";
 
 // Adjust the import path based on your project structure
-import { createClass } from "../../../data/createClass"; 
+import { createClass } from "../../../data/createClass";
+
+// Get data from discipleship classes
+import {
+  fetchDiscipleshipClasses,
+  fetchMonthlyCompletedStats,
+} from "../../../data/discipleship";
 
 import axios from "axios";
 
@@ -38,18 +46,37 @@ const generateClassName = async () => {
 export default function Discipleship() {
   // State for form data
   const [formData, setFormData] = useState({
-    class_name: generateClassName(),
+    class_name: "", // Initialize as empty string
     instructor: "",
     creation_date: "",
     end_date: "",
-    description: "",
+    description: "", // Ensure this is handled if required
     type: "Virtual",
   });
 
   const [loadingClassName, setLoadingClassName] = useState(true);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
+  const [submitError, setSubmitError] = useState(null); // For error messages
 
+  // Snackbar states
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success"); // 'success' or 'error'
+
+  // State for fetched classes
+  const [classes, setClasses] = useState([]); // Original list of classes
+  const [filteredClasses, setFilteredClasses] = useState([]); // Filtered list based on search
+  const [searchQuery, setSearchQuery] = useState(""); // Search input
+  const [loading, setLoading] = useState(true); // Loading state for classes
+  const [error, setError] = useState(null); // Error state for classes
+
+  // State for bar chart data
+  const [barChartData, setBarChartData] = useState({});
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear()); // Default to current year
+  const [loadingStats, setLoadingStats] = useState(true); // Loader state for stats
+  const [errorStats, setErrorStats] = useState(null); // Error state for stats
+
+  // Fetch generated class name on component mount
   useEffect(() => {
     const fetchClassName = async () => {
       try {
@@ -66,6 +93,87 @@ export default function Discipleship() {
     fetchClassName();
   }, []);
 
+  // Fetch discipleship classes on component mount
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const data = await fetchDiscipleshipClasses(); // Fetch data from API
+        setClasses(data); // Set the fetched classes
+        setFilteredClasses(data); // Initialize filteredClasses with all classes
+      } catch (err) {
+        setError("Failed to load classes."); // Set error message
+      } finally {
+        setLoading(false); // Stop loading
+      }
+    };
+
+    fetchClasses();
+  }, []);
+
+  // Fetch monthly stats whenever selectedYear changes
+  useEffect(() => {
+    const loadMonthlyStats = async () => {
+      setLoadingStats(true);
+      try {
+        const data = await fetchMonthlyCompletedStats(selectedYear); // Fetch stats based on selectedYear
+
+        // Transform the data for the bar chart
+        const months = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        const maleData = new Array(12).fill(0);
+        const femaleData = new Array(12).fill(0);
+
+        data.forEach((item) => {
+          const monthIndex = new Date(`${item.month}-01`).getMonth();
+          maleData[monthIndex] = item.male_completed_count || 0;
+          femaleData[monthIndex] = item.female_completed_count || 0;
+        });
+
+        setBarChartData({
+          labels: months,
+          datasets: [
+            {
+              label: "Male",
+              data: maleData,
+              backgroundColor: "#4e79a7",
+            },
+            {
+              label: "Female",
+              data: femaleData,
+              backgroundColor: "#a0cbe8",
+            },
+          ],
+        });
+      } catch (err) {
+        setErrorStats("Failed to load monthly completed stats.");
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    loadMonthlyStats();
+  }, [selectedYear]);
+
+  // Update filteredClasses when searchQuery changes
+  useEffect(() => {
+    const filtered = classes.filter((cls) =>
+      cls.instructor.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredClasses(filtered);
+  }, [searchQuery, classes]);
+
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -80,8 +188,16 @@ export default function Discipleship() {
     setLoadingSubmit(true);
     setSubmitError(null); // Reset previous errors
     try {
+      console.log("Submitting Form Data:", formData); // Log formData for debugging
+
       const result = await createClass(formData);
       console.log("Class created successfully:", result);
+
+      // Show success message
+      setSnackbarMessage("Class created successfully!");
+      setSnackbarSeverity("success");
+      setOpenSnackbar(true);
+
       // Reset form with a new class name
       const newClassName = await generateClassName();
       setFormData({
@@ -92,50 +208,55 @@ export default function Discipleship() {
         description: "",
         type: "Virtual",
       });
-      // Optionally, display a success message to the user
+
+      // Reset search query to show all classes after adding a new class
+      setSearchQuery("");
     } catch (error) {
       console.error("Error creating class:", error);
-      setSubmitError("Failed to create class. Please try again.");
+
+      // Extract error message from response if available
+      let errorMsg = "Failed to create class. Please try again.";
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMsg = error.response.data.message;
+      }
+
+      setSubmitError(errorMsg);
+
+      // Show error snackbar
+      setSnackbarMessage(errorMsg);
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
     } finally {
       setLoadingSubmit(false);
     }
   };
 
-  // Sample chart data and options
-  const barChartData = {
-    labels: [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ],
-    datasets: [
-      {
-        label: "Male",
-        data: [10, 20, 15, 25, 20, 30, 20, 25, 15, 18, 22, 19],
-        backgroundColor: "#4e79a7",
-      },
-      {
-        label: "Female",
-        data: [15, 10, 18, 17, 10, 8, 15, 12, 10, 14, 16, 13],
-        backgroundColor: "#a0cbe8",
-      },
-    ],
+  // Handle Snackbar close
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setOpenSnackbar(false);
   };
 
+  // Placeholder function for date change handling
+  const handleDateChange = (newDate) => {
+    // Implement data fetching based on the newDate
+    // For example:
+    // const updatedData = fetchDataForYear(newDate);
+    // setBarChartData(updatedData);
+    setSelectedYear(newDate);
+  };
+
+  // Bar chart options
   const barChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      title: { display: true, text: "Retention Rate by Gender" },
+      title: {
+        display: true,
+        text: `Retention Rate by Gender (${selectedYear})`,
+      },
       tooltip: { enabled: true },
       legend: { position: "bottom" },
     },
@@ -153,14 +274,6 @@ export default function Discipleship() {
         title: { display: true, text: "Retention Rate (%)" },
       },
     },
-  };
-
-  // Placeholder function for date change handling
-  const handleDateChange = (newDate) => {
-    // Implement data fetching based on the newDate
-    // For example:
-    // const updatedData = fetchDataForYear(newDate);
-    // setBarChartData(updatedData);
   };
 
   return (
@@ -293,7 +406,9 @@ export default function Discipleship() {
           <TextField
             fullWidth
             variant="outlined"
-            placeholder="Search"
+            placeholder="Search by instructor"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)} // Update searchQuery on input
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -305,30 +420,49 @@ export default function Discipleship() {
           />
 
           {/* Discipleship Classes List */}
-          <Card sx={{ padding: "1rem", backgroundColor: "#FFFFFF" }}>
+          <Card
+            sx={{
+              padding: "1rem",
+              backgroundColor: "#FFFFFF",
+              height: "30rem", // Total height of the Card
+              overflowY: "auto", // Enable vertical scrolling if content overflows
+            }}
+          >
             <Typography variant="h6" fontWeight="bold" gutterBottom>
               Discipleship Classes
             </Typography>
             <Box>
-              {["Class 1", "Class 5", "Class 9", "Class 2", "Class 3"].map(
-                (className, index) => (
-                  <Box key={index} display="flex" alignItems="center" mb={2}>
+              {/* Show loading state */}
+              {loading ? (
+                <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                  <CircularProgress size={24} />
+                </Box>
+              ) : error ? (
+                <Typography color="error">{error}</Typography>
+              ) : filteredClasses.length > 0 ? (
+                filteredClasses.map((classData) => (
+                  <Box
+                    key={classData.class_id}
+                    display="flex"
+                    alignItems="center"
+                    mb={2}
+                  >
                     <Avatar sx={{ width: 36, height: 36 }}>👤</Avatar>
                     <Box ml={1}>
                       <Typography variant="body1" fontWeight="bold">
-                        {className}
+                        {classData.class_name}
                       </Typography>
                       <Typography variant="body2" color="textSecondary">
-                        John Kimani - mb.12
+                        {classData.instructor} - {classData.total_members} members
                       </Typography>
                     </Box>
                   </Box>
-                )
+                ))
+              ) : (
+                <Typography>No classes found.</Typography>
               )}
             </Box>
           </Card>
-
-          {/* Optional: Add more content here if needed */}
         </Grid>
       </Grid>
 
@@ -337,12 +471,27 @@ export default function Discipleship() {
         {/* Completed Discipleship - Bar Chart */}
         <Grid item xs={12}>
           <Card sx={{ height: 730, backgroundColor: "#FFFFFF" }}>
-            <BarChart
-              data={barChartData}
-              options={barChartOptions}
-              title="Completed Discipleship"
-              onDateChange={handleDateChange}
-            />
+            {loadingStats ? (
+              <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                height="100%"
+              >
+                <CircularProgress size={40} />
+              </Box>
+            ) : errorStats ? (
+              <Typography color="error" align="center" mt={4}>
+                {errorStats}
+              </Typography>
+            ) : (
+              <BarChart
+                data={barChartData}
+                options={barChartOptions}
+                title="Completed Discipleship"
+                onDateChange={handleDateChange}
+              />
+            )}
           </Card>
         </Grid>
       </Grid>
@@ -352,12 +501,21 @@ export default function Discipleship() {
         <AbsenteeList />
       </Box>
 
-      {/* Display Submission Error */}
-      {submitError && (
-        <Box mt={2}>
-          <Typography color="error">{submitError}</Typography>
-        </Box>
-      )}
+      {/* Snackbar for User Feedback */}
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbarSeverity}
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

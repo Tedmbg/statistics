@@ -1,6 +1,6 @@
 import { Box, Typography, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
 import DashboardCard from './DashboardCard';
-import { useState,useEffect } from "react";
+import { useState } from "react";
 
 export default function Dashboard() {
   const [year, setYear] = useState(2024);
