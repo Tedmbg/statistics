@@ -1,4 +1,5 @@
-import  { useState } from "react";
+// Discipleship.jsx
+import  { useState, useEffect } from "react";
 import {
   Box,
   Grid,
@@ -9,19 +10,29 @@ import {
   Avatar,
   InputAdornment,
   MenuItem,
+  CircularProgress, // Import CircularProgress
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
 import AbsenteeList from "./AbsenteeList";
 import BarChart from "../../../components/BarChart";
-import DoughnutC from "../../../components/DoughnutC";
-import { createClass } from "../../../data/createClass";
 
-// Function to generate a random class name
-const generateClassName = () => {
-  const className = "ICC";
-  const number = Math.floor(Math.random() * 100) + 100; // Use floor for integer
-  return `${className}${number}`;
+// Adjust the import path based on your project structure
+import { createClass } from "../../../data/createClass"; 
+
+import axios from "axios";
+
+// Function to fetch the class name from the server
+const generateClassName = async () => {
+  try {
+    const response = await axios.get(
+      "https://statistics-production-032c.up.railway.app/api/generate-class-name"
+    );
+    return response.data.className; // Return the generated class name
+  } catch (error) {
+    console.error("Error generating class name:", error);
+    throw error; // Handle error appropriately
+  }
 };
 
 export default function Discipleship() {
@@ -35,6 +46,26 @@ export default function Discipleship() {
     type: "Virtual",
   });
 
+  const [loadingClassName, setLoadingClassName] = useState(true);
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+
+  useEffect(() => {
+    const fetchClassName = async () => {
+      try {
+        const generatedName = await generateClassName();
+        setFormData((prevData) => ({ ...prevData, class_name: generatedName }));
+      } catch (error) {
+        console.error("Failed to generate class name");
+        // Optionally, set an error state here to inform the user
+      } finally {
+        setLoadingClassName(false);
+      }
+    };
+
+    fetchClassName();
+  }, []);
+
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -46,21 +77,27 @@ export default function Discipleship() {
 
   // Handle form submission
   const handleSubmit = async () => {
+    setLoadingSubmit(true);
+    setSubmitError(null); // Reset previous errors
     try {
       const result = await createClass(formData);
       console.log("Class created successfully:", result);
-      // Reset form or show success message
+      // Reset form with a new class name
+      const newClassName = await generateClassName();
       setFormData({
-        class_name: generateClassName(),
+        class_name: newClassName,
         instructor: "",
         creation_date: "",
         end_date: "",
         description: "",
         type: "Virtual",
       });
+      // Optionally, display a success message to the user
     } catch (error) {
       console.error("Error creating class:", error);
-      // Show error message
+      setSubmitError("Failed to create class. Please try again.");
+    } finally {
+      setLoadingSubmit(false);
     }
   };
 
@@ -97,32 +134,23 @@ export default function Discipleship() {
   const barChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    plugins: {
+      title: { display: true, text: "Retention Rate by Gender" },
+      tooltip: { enabled: true },
+      legend: { position: "bottom" },
+    },
     scales: {
       x: { stacked: true },
       y: {
         stacked: true,
         beginAtZero: true,
-        title: { display: true, text: "No of Members" },
-      },
-    },
-  };
-
-  const doughnutData = {
-    labels: ["Completed", "Incomplete"],
-    datasets: [
-      {
-        data: [80, 20],
-        backgroundColor: ["#4e79a7", "#f28e2b"],
-      },
-    ],
-  };
-
-  const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "bottom",
+        max: 100, // Maximum value for percentage
+        ticks: {
+          callback: function (value) {
+            return value + "%";
+          },
+        },
+        title: { display: true, text: "Retention Rate (%)" },
       },
     },
   };
@@ -141,23 +169,33 @@ export default function Discipleship() {
         Discipleship
       </Typography>
 
+      {/* Main Grid Container */}
       <Grid container spacing={7}>
         {/* Left Section - Form */}
         <Grid item xs={12} md={8}>
           <Grid container spacing={10}>
             {/* Class Name */}
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Class Name"
-                variant="outlined"
-                name="class_name"
-                value={formData.class_name}
-                onChange={handleChange}
-                sx={{
-                  backgroundColor: "#FFFFFF",
-                }}
-              />
+              {loadingClassName ? (
+                <Box
+                  display="flex"
+                  justifyContent="center"
+                  alignItems="center"
+                  height={56}
+                >
+                  <CircularProgress size={24} />
+                </Box>
+              ) : (
+                <TextField
+                  fullWidth
+                  label="Class Name"
+                  variant="outlined"
+                  name="class_name"
+                  value={formData.class_name}
+                  disabled
+                  sx={{ backgroundColor: "#FFFFFF" }}
+                />
+              )}
             </Grid>
 
             {/* Facilitator */}
@@ -169,9 +207,7 @@ export default function Discipleship() {
                 name="instructor"
                 value={formData.instructor}
                 onChange={handleChange}
-                sx={{
-                  backgroundColor: "#FFFFFF",
-                }}
+                sx={{ backgroundColor: "#FFFFFF" }}
               />
             </Grid>
 
@@ -186,6 +222,7 @@ export default function Discipleship() {
                 value={formData.creation_date}
                 onChange={handleChange}
                 InputLabelProps={{ shrink: true }}
+                sx={{ backgroundColor: "#FFFFFF" }}
               />
             </Grid>
 
@@ -200,6 +237,7 @@ export default function Discipleship() {
                 value={formData.end_date}
                 onChange={handleChange}
                 InputLabelProps={{ shrink: true }}
+                sx={{ backgroundColor: "#FFFFFF" }}
               />
             </Grid>
 
@@ -213,9 +251,7 @@ export default function Discipleship() {
                 value={formData.type}
                 onChange={handleChange}
                 select
-                sx={{
-                  backgroundColor: "#FFFFFF",
-                }}
+                sx={{ backgroundColor: "#FFFFFF" }}
               >
                 <MenuItem value="Virtual">Virtual</MenuItem>
                 <MenuItem value="In-person">In-person</MenuItem>
@@ -234,15 +270,18 @@ export default function Discipleship() {
               <Button
                 variant="contained"
                 onClick={handleSubmit}
-                startIcon={<AddIcon />}
+                startIcon={!loadingSubmit && <AddIcon />}
+                disabled={loadingSubmit}
                 sx={{
                   backgroundColor: "#3A85FE",
-                  "&:hover": {
-                    backgroundColor: "#357AE8",
-                  },
+                  "&:hover": { backgroundColor: "#357AE8" },
                 }}
               >
-                Add Class
+                {loadingSubmit ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  "Add Class"
+                )}
               </Button>
             </Grid>
           </Grid>
@@ -288,13 +327,15 @@ export default function Discipleship() {
               )}
             </Box>
           </Card>
+
+          {/* Optional: Add more content here if needed */}
         </Grid>
       </Grid>
 
       {/* Charts Section */}
       <Grid container spacing={2} mt={2}>
         {/* Completed Discipleship - Bar Chart */}
-        <Grid item xs={12} md={12}>
+        <Grid item xs={12}>
           <Card sx={{ height: 730, backgroundColor: "#FFFFFF" }}>
             <BarChart
               data={barChartData}
@@ -310,6 +351,13 @@ export default function Discipleship() {
       <Box mt={4}>
         <AbsenteeList />
       </Box>
+
+      {/* Display Submission Error */}
+      {submitError && (
+        <Box mt={2}>
+          <Typography color="error">{submitError}</Typography>
+        </Box>
+      )}
     </Box>
   );
 }
