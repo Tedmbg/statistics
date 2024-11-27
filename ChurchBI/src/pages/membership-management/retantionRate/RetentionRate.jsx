@@ -356,7 +356,7 @@ function RetentionRate() {
               </Card>
             </Grid>
 
-            {/* Work Status */}
+            {/* Work Status incomplete */}
             <Grid item xs={6}>
               <Card
                 sx={{
