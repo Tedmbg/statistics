@@ -2,10 +2,16 @@ const express = require('express');
 const dotenv = require('dotenv');
 const { Pool } = require('pg');
 const cors = require('cors')
+const cron = require('node-cron');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 
 // Load environment variables
 dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
 
 // Initialize Express
 const app = express();
@@ -43,6 +49,45 @@ pool.connect((err, client, release) => {
   console.log('Connected to the database');
   release();
 });
+
+// Schedule a task to run daily at midnight
+cron.schedule('0 0 * * *', async () => {
+    console.log('Running cron job to update class statuses...');
+    try {
+        // Update status to 'completed' for classes where end_date has passed
+        const result = await pool.query(`
+            UPDATE discipleship_classes
+            SET status = 'completed'
+            WHERE end_date < CURRENT_DATE AND status != 'completed';
+        `);
+
+        console.log(`Updated ${result.rowCount} classes to completed status.`);
+    } catch (err) {
+        console.error('Error updating class statuses:', err);
+    }
+});
+
+const authenticateAdmin = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ status: 'error', message: 'Unauthorized: No token provided' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ status: 'error', message: 'Forbidden: Invalid token' });
+        }
+
+        if (user.role !== 'Admin') {
+            return res.status(403).json({ status: 'error', message: 'Access denied: Admins only' });
+        }
+
+        req.user = user; // Attach user info to the request
+        next();
+    });
+};
 
 // Sample route
 app.get('/', (req, res) => {
@@ -672,10 +717,10 @@ app.get('/api/generate-class-name', async (req, res) => {
 
 // Add Discipleship Class API
 app.post('/api/discipleship-classes_add', async (req, res) => {
-    const { class_name, instructor, creation_date, end_date, description, type } = req.body;
+    const { class_name, instructor, creation_date, end_date, description, type, class_time, class_days } = req.body;
 
     // Validate request body
-    if (!class_name || !instructor || !creation_date || !end_date || !type) {
+    if (!class_name || !instructor || !creation_date || !end_date || !type || !class_time || !class_days) {
         return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
@@ -684,17 +729,22 @@ app.post('/api/discipleship-classes_add', async (req, res) => {
         return res.status(400).json({ status: 'error', message: "Type must be either 'Virtual' or 'Physical'" });
     }
 
+    // Validate 'class_days' as an array
+    if (!Array.isArray(class_days) || class_days.length === 0) {
+        return res.status(400).json({ status: 'error', message: 'Class days must be a non-empty array' });
+    }
+
     try {
         // Get the current maximum class_id
         const maxIdResult = await pool.query(`SELECT MAX(class_id) AS max_id FROM discipleship_classes;`);
         const nextClassId = (maxIdResult.rows[0].max_id || 0) + 1; // Default to 1 if table is empty
 
-        // Insert the new class
+        // Insert the new class with status = 'ongoing'
         const result = await pool.query(
-            `INSERT INTO discipleship_classes (class_id, class_name, instructor, start_date, end_date, description, type)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `INSERT INTO discipleship_classes (class_id, class_name, instructor, start_date, end_date, description, type, class_time, class_days, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
              RETURNING *;`,
-            [nextClassId, class_name, instructor, creation_date, end_date, description || null, type]
+            [nextClassId, class_name, instructor, creation_date, end_date, description || null, type, class_time, class_days, 'ongoing']
         );
 
         res.status(201).json({
@@ -957,6 +1007,218 @@ app.get('/api/service-ministries/work-status', async (req, res) => {
     }
 });
 
+// update the discipleship-classes end-date 
+app.put('/api/discipleship-classes/:id/end-date', async (req, res) => {
+    const { id } = req.params;
+    const { end_date } = req.body;
+
+    try {
+        // Update end_date and status based on the new end_date
+        const result = await pool.query(`
+            UPDATE discipleship_classes
+            SET end_date = $1,
+                status = CASE
+                    WHEN $1 < CURRENT_DATE THEN 'completed'
+                    ELSE 'ongoing'
+                END
+            WHERE class_id = $2
+            RETURNING *;
+        `, [end_date, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Class not found' });
+        }
+
+        res.json({ status: 'success', data: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+
+// update discipleship-classes meeting times 
+app.put('/api/discipleship-classes/:id/time', async (req, res) => {
+    const { id } = req.params;
+    const { class_time } = req.body;
+
+    if (!class_time) {
+        return res.status(400).json({ status: 'error', message: 'Class time is required' });
+    }
+
+    try {
+        const result = await pool.query(`
+            UPDATE discipleship_classes
+            SET class_time = $1
+            WHERE class_id = $2
+            RETURNING *;
+        `, [class_time, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Class not found' });
+        }
+
+        res.json({ status: 'success', data: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+// update discipleship-classes days 
+app.put('/api/discipleship-classes/:id/days', async (req, res) => {
+    const { id } = req.params;
+    const { class_days } = req.body;
+
+    if (!Array.isArray(class_days) || class_days.length === 0) {
+        return res.status(400).json({ status: 'error', message: 'Class days must be a non-empty array' });
+    }
+
+    try {
+        const result = await pool.query(`
+            UPDATE discipleship_classes
+            SET class_days = $1
+            WHERE class_id = $2
+            RETURNING *;
+        `, [class_days, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Class not found' });
+        }
+
+        res.json({ status: 'success', data: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+// Check the available disclipship classes
+app.get('/api/available-classes', async (req, res) => {
+    const { days } = req.query; // Number of days passed as query parameter
+    const intervalDays = days ? parseInt(days, 10) : 10; // Default to 10 days if not provided
+
+    if (isNaN(intervalDays) || intervalDays < 0) {
+        return res.status(400).json({ status: 'error', message: 'Invalid number of days' });
+    }
+
+    try {
+        const result = await pool.query(`
+            SELECT
+                class_id,
+                class_name,
+                instructor,
+                start_date,
+                end_date,
+                status
+            FROM
+                discipleship_classes
+            WHERE
+                status = 'ongoing'
+                AND start_date >= CURRENT_DATE - $1 * INTERVAL '1 day';
+        `, [intervalDays]);
+
+        res.status(200).json({
+            status: 'success',
+            data: result.rows,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+// api for updating start_date (for testing only): DO NOT USE **** DO NOT USE 
+
+app.put('/api/discipleship-classes/:id/start-date', async (req, res) => {
+    const { id } = req.params;
+    const { start_date } = req.body;
+
+    if (!start_date) {
+        return res.status(400).json({ status: 'error', message: 'Start date is required' });
+    }
+
+    try {
+        const result = await pool.query(`
+            UPDATE discipleship_classes
+            SET start_date = $1
+            WHERE class_id = $2
+            RETURNING *;
+        `, [start_date, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Class not found' });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Start date updated successfully',
+            data: result.rows[0],
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+// Api for admin to create  login 
+app.post('/api/users/create', authenticateAdmin, async (req, res) => {
+    const { userfname, password, role, contact_details, phone_no } = req.body;
+
+    // Validate input
+    if (!userfname || !password || !role || !contact_details || !phone_no) {
+        return res.status(400).json({ status: 'error', message: 'All fields are required' });
+    }
+
+    // Validate role
+    const allowedRoles = ['Admin', 'Pastor', 'Leader'];
+    if (!allowedRoles.includes(role)) {
+        return res.status(403).json({ status: 'error', message: 'Invalid role specified' });
+    }
+
+    try {
+        // Fetch the current maximum user_id
+        const maxIdResult = await pool.query('SELECT MAX(user_id) AS max_id FROM users');
+        const nextUserId = (maxIdResult.rows[0].max_id || 0) + 1;
+
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Insert the new user into the database
+        const result = await pool.query(`
+            INSERT INTO users (user_id, username, password, role, contact_details, phone_no, date_created)
+            VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+            RETURNING *;
+        `, [nextUserId, userfname, hashedPassword, role, contact_details, phone_no]);
+
+        // Generate JWT token for the new user
+        const token = jwt.sign(
+            { userId: result.rows[0].user_id, username: result.rows[0].username, role: result.rows[0].role },
+            JWT_SECRET,
+            { expiresIn: JWT_EXPIRES_IN }
+        );
+
+        res.status(201).json({
+            status: 'success',
+            message: 'User account created successfully',
+            data: {
+                user_id: result.rows[0].user_id,
+                userfname: result.rows[0].userfname,
+                role: result.rows[0].role,
+                contact_details: result.rows[0].contact_details,
+                phone_no: result.rows[0].phone_no,
+                date_created: result.rows[0].date_created,
+                token // Return the token
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
 
 // Start the server
 app.listen(PORT, () => {
