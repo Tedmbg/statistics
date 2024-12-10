@@ -229,8 +229,8 @@ app.get('/api/members/count', async (req, res) => {
     const { year, month } = req.query;
     try {
         let query = 'SELECT COUNT(*)::INTEGER AS total_members FROM members';
-        let conditions = [];
-        
+        let conditions = ["DATE_PART('year', AGE(date_of_birth)) >= 18"];
+
         if (year) conditions.push(`EXTRACT(YEAR FROM membership_date) = ${year}`);
         if (month) conditions.push(`EXTRACT(MONTH FROM membership_date) = ${month}`);
         
@@ -252,7 +252,12 @@ app.get('/api/members/count', async (req, res) => {
 app.get('/api/conversions/count', async (req, res) => {
     const { year, month } = req.query;
     try {
-        let query = "SELECT COUNT(*)::INTEGER AS total_conversions FROM members WHERE conversion_date IS NOT NULL";
+        let query = `
+            SELECT COUNT(*)::INTEGER AS total_conversions 
+            FROM members 
+            WHERE conversion_date IS NOT NULL 
+              AND DATE_PART('year', AGE(date_of_birth)) >= 18
+        `;
         let conditions = [];
 
         // Apply year filter if provided
@@ -276,15 +281,32 @@ app.get('/api/conversions/count', async (req, res) => {
 
 
 // Total Number of Ministries
+// Total Number of Ministries with optional year and month filters
 app.get('/api/ministries/count', async (req, res) => {
+    const { year, month } = req.query;
     try {
-        const result = await pool.query('SELECT COUNT(*)::INTEGER AS total_ministries FROM ministries');
+        let query = 'SELECT COUNT(*)::INTEGER AS total_ministries FROM ministries';
+        let conditions = [];
+
+        // Apply year filter if provided
+        if (year) conditions.push(`EXTRACT(YEAR FROM creation_date) = ${year}`);
+
+        // Apply month filter if provided
+        if (month) conditions.push(`EXTRACT(MONTH FROM creation_date) = ${month}`);
+
+        // Add conditions to the query if there are any
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        const result = await pool.query(query);
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
     }
 });
+
 
 
 // Total Number of Baptisms & allow yearmonth filter
@@ -371,6 +393,7 @@ app.get('/api/members/age-distribution', async (req, res) => {
         const query = `
             SELECT
                 CASE
+                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 0 AND 17 THEN '0-17'
                     WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
                     WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
                     WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 36 AND 49 THEN '36-49'
