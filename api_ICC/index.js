@@ -2,10 +2,16 @@ const express = require('express');
 const dotenv = require('dotenv');
 const { Pool } = require('pg');
 const cors = require('cors')
+const cron = require('node-cron');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 
 // Load environment variables
 dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
 
 // Initialize Express
 const app = express();
@@ -43,6 +49,45 @@ pool.connect((err, client, release) => {
   console.log('Connected to the database');
   release();
 });
+
+// Schedule a task to run daily at midnight
+cron.schedule('0 0 * * *', async () => {
+    console.log('Running cron job to update class statuses...');
+    try {
+        // Update status to 'completed' for classes where end_date has passed
+        const result = await pool.query(`
+            UPDATE discipleship_classes
+            SET status = 'completed'
+            WHERE end_date < CURRENT_DATE AND status != 'completed';
+        `);
+
+        console.log(`Updated ${result.rowCount} classes to completed status.`);
+    } catch (err) {
+        console.error('Error updating class statuses:', err);
+    }
+});
+
+const authenticateAdmin = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ status: 'error', message: 'Unauthorized: No token provided' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ status: 'error', message: 'Forbidden: Invalid token' });
+        }
+
+        if (user.role !== 'Admin') {
+            return res.status(403).json({ status: 'error', message: 'Access denied: Admins only' });
+        }
+
+        req.user = user; // Attach user info to the request
+        next();
+    });
+};
 
 // Sample route
 app.get('/', (req, res) => {
@@ -184,8 +229,8 @@ app.get('/api/members/count', async (req, res) => {
     const { year, month } = req.query;
     try {
         let query = 'SELECT COUNT(*)::INTEGER AS total_members FROM members';
-        let conditions = [];
-        
+        let conditions = ["DATE_PART('year', AGE(date_of_birth)) >= 18"];
+
         if (year) conditions.push(`EXTRACT(YEAR FROM membership_date) = ${year}`);
         if (month) conditions.push(`EXTRACT(MONTH FROM membership_date) = ${month}`);
         
@@ -207,7 +252,12 @@ app.get('/api/members/count', async (req, res) => {
 app.get('/api/conversions/count', async (req, res) => {
     const { year, month } = req.query;
     try {
-        let query = "SELECT COUNT(*)::INTEGER AS total_conversions FROM members WHERE conversion_date IS NOT NULL";
+        let query = `
+            SELECT COUNT(*)::INTEGER AS total_conversions 
+            FROM members 
+            WHERE conversion_date IS NOT NULL 
+              AND DATE_PART('year', AGE(date_of_birth)) >= 18
+        `;
         let conditions = [];
 
         // Apply year filter if provided
@@ -231,15 +281,32 @@ app.get('/api/conversions/count', async (req, res) => {
 
 
 // Total Number of Ministries
+// Total Number of Ministries with optional year and month filters
 app.get('/api/ministries/count', async (req, res) => {
+    const { year, month } = req.query;
     try {
-        const result = await pool.query('SELECT COUNT(*)::INTEGER AS total_ministries FROM ministries');
+        let query = 'SELECT COUNT(*)::INTEGER AS total_ministries FROM ministries';
+        let conditions = [];
+
+        // Apply year filter if provided
+        if (year) conditions.push(`EXTRACT(YEAR FROM creation_date) = ${year}`);
+
+        // Apply month filter if provided
+        if (month) conditions.push(`EXTRACT(MONTH FROM creation_date) = ${month}`);
+
+        // Add conditions to the query if there are any
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        const result = await pool.query(query);
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
     }
 });
+
 
 
 // Total Number of Baptisms & allow yearmonth filter
@@ -326,15 +393,12 @@ app.get('/api/members/age-distribution', async (req, res) => {
         const query = `
             SELECT
                 CASE
-                    WHEN DATE_PART('year', AGE(date_of_birth)) = 0 AND DATE_PART('month', AGE(date_of_birth)) BETWEEN 1 AND 11 THEN '1-11 M'
-                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 1 AND 5 THEN '1-5' 
-                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 6 AND 10 THEN '6-10'
-                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 11 AND 17 THEN '11-17'
+                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 0 AND 17 THEN '0-17'
                     WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
                     WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
                     WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 36 AND 49 THEN '36-49'
-                    WHEN DATE_PART('year', AGE(date_of_birth)) >= 50 THEN '50+'
-                    ELSE 'Unknown'
+                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 50 AND 64 THEN '50-64'
+                    WHEN DATE_PART('year', AGE(date_of_birth)) >= 65 THEN '65+'
                 END AS age_range,
                 COUNT(*) ::INTEGER AS count
             FROM members
@@ -348,15 +412,26 @@ app.get('/api/members/age-distribution', async (req, res) => {
     }
 });
 
+
 // work status 
 app.get('/api/members/work-status', async (req, res) => {
+    const { year, month } = req.query;
     try {
-        const query = `
+        let query = `
             SELECT occupation_status, COUNT(*)::INTEGER AS count
             FROM members
-            GROUP BY occupation_status
-            ORDER BY count ASC
+            WHERE DATE_PART('year', AGE(date_of_birth)) >= 18
         `;
+        const conditions = [];
+        
+        if (year) conditions.push(`EXTRACT(YEAR FROM membership_date) = ${year}`);
+        if (month) conditions.push(`EXTRACT(MONTH FROM membership_date) = ${month}`);
+        
+        if (conditions.length > 0) {
+            query += ' AND ' + conditions.join(' AND ');
+        }
+        
+        query += ` GROUP BY occupation_status ORDER BY count ASC`;
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (error) {
@@ -366,14 +441,26 @@ app.get('/api/members/work-status', async (req, res) => {
 });
 
 
+
 //gender distribution 
 app.get('/api/members/gender-distribution', async (req, res) => {
+    const { year, month } = req.query;
     try {
-        const query = `
-            SELECT gender, COUNT(*) ::INTEGER AS count
+        let query = `
+            SELECT gender, COUNT(*)::INTEGER AS count
             FROM members
-            GROUP BY gender
+            WHERE DATE_PART('year', AGE(date_of_birth)) >= 18
         `;
+        const conditions = [];
+        
+        if (year) conditions.push(`EXTRACT(YEAR FROM membership_date) = ${year}`);
+        if (month) conditions.push(`EXTRACT(MONTH FROM membership_date) = ${month}`);
+        
+        if (conditions.length > 0) {
+            query += ' AND ' + conditions.join(' AND ');
+        }
+        
+        query += ` GROUP BY gender`;
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (error) {
@@ -384,15 +471,25 @@ app.get('/api/members/gender-distribution', async (req, res) => {
 
 //marital status
 app.get('/api/members/marital-status', async (req, res) => {
+    const { year, month } = req.query;
     try {
-        const query = `
+        let query = `
             SELECT 
                 married_status,
                 COUNT(*)::INTEGER AS count
             FROM members
-            GROUP BY married_status
-            ORDER BY count ASC
+            WHERE DATE_PART('year', AGE(date_of_birth)) >= 18
         `;
+        const conditions = [];
+        
+        if (year) conditions.push(`EXTRACT(YEAR FROM membership_date) = ${year}`);
+        if (month) conditions.push(`EXTRACT(MONTH FROM membership_date) = ${month}`);
+        
+        if (conditions.length > 0) {
+            query += ' AND ' + conditions.join(' AND ');
+        }
+        
+        query += ` GROUP BY married_status ORDER BY count ASC`;
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (error) {
@@ -401,14 +498,26 @@ app.get('/api/members/marital-status', async (req, res) => {
     }
 });
 
+
 // residence 
 app.get('/api/members/residence', async (req, res) => {
+    const { year, month } = req.query;
     try {
-        const query = `
-            SELECT location AS residence, COUNT(*) ::INTEGER AS count
+        let query = `
+            SELECT location AS residence, COUNT(*)::INTEGER AS count
             FROM members
-            GROUP BY location
+            WHERE DATE_PART('year', AGE(date_of_birth)) >= 18
         `;
+        const conditions = [];
+        
+        if (year) conditions.push(`EXTRACT(YEAR FROM membership_date) = ${year}`);
+        if (month) conditions.push(`EXTRACT(MONTH FROM membership_date) = ${month}`);
+        
+        if (conditions.length > 0) {
+            query += ' AND ' + conditions.join(' AND ');
+        }
+        
+        query += ` GROUP BY location`;
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (error) {
@@ -416,16 +525,28 @@ app.get('/api/members/residence', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+
 
 
 // country of orgin 
 app.get('/api/members/county-origin', async (req, res) => {
+    const { year, month } = req.query;
     try {
-        const query = `
+        let query = `
             SELECT county_of_origin, COUNT(*)::INTEGER AS count
             FROM members
-            GROUP BY county_of_origin
+            WHERE DATE_PART('year', AGE(date_of_birth)) >= 18
         `;
+        const conditions = [];
+        
+        if (year) conditions.push(`EXTRACT(YEAR FROM membership_date) = ${year}`);
+        if (month) conditions.push(`EXTRACT(MONTH FROM membership_date) = ${month}`);
+        
+        if (conditions.length > 0) {
+            query += ' AND ' + conditions.join(' AND ');
+        }
+        
+        query += ` GROUP BY county_of_origin`;
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (error) {
@@ -455,6 +576,7 @@ app.get('/api/members/monthly', async (req, res) => {
                 COUNT(CASE WHEN gender = 'Female' THEN 1 END)::INTEGER AS female_count
             FROM members
             WHERE EXTRACT(YEAR FROM membership_date) = $1
+                AND DATE_PART('year', AGE(date_of_birth)) >= 18
             GROUP BY month, month_number
             ORDER BY month_number
         `;
@@ -479,6 +601,7 @@ app.get('/api/baptisms/monthly', async (req, res) => {
                 COUNT(CASE WHEN gender = 'Female' THEN 1 END) ::INTEGER AS female_count
             FROM members
             WHERE baptized = TRUE
+                AND DATE_PART('year', AGE(date_of_birth)) >= 18
         `;
 
         // Add the year condition 
@@ -510,13 +633,24 @@ app.get('/api/baptisms/monthly', async (req, res) => {
 
 // member residence for testing 
 app.get('/api/members/residence3', async (req, res) => {
+    const { year, month } = req.query;
     try {
-        const query = `
-            SELECT location AS residence, COUNT(*) ::INTEGER AS count
+        let query = `
+            SELECT location AS residence, COUNT(*)::INTEGER AS count
             FROM members
-            GROUP BY location
-            LIMIT 6
+            WHERE DATE_PART('year', AGE(date_of_birth)) >= 18
         `;
+        const conditions = [];
+
+        if (year) conditions.push(`EXTRACT(YEAR FROM membership_date) = ${year}`);
+        if (month) conditions.push(`EXTRACT(MONTH FROM membership_date) = ${month}`);
+
+        if (conditions.length > 0) {
+            query += ' AND ' + conditions.join(' AND ');
+        }
+
+        query += ` GROUP BY location LIMIT 6`;
+
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (error) {
@@ -525,40 +659,54 @@ app.get('/api/members/residence3', async (req, res) => {
     }
 });
 
-
-
 // members who are just visting 
 app.get('/api/just-visiting', async (req, res) => {
-    const { startDate, endDate } = req.query;
-  
+    const { year, month, startDate, endDate } = req.query;
+
     try {
-      const result = await pool.query(`
-        SELECT
-          COUNT(*)::INTEGER AS total_visitors
-        FROM
-          members m
-        WHERE
-          m.is_visiting = TRUE
-          AND ($1::DATE IS NULL OR m.membership_date >= $1)
-          AND ($2::DATE IS NULL OR m.membership_date <= $2);
-      `, [startDate || null, endDate || null]);
-  
-      res.json({ status: 'success', data: { total_visitors: result.rows[0].total_visitors } });
+        let query = `
+            SELECT COUNT(*)::INTEGER AS total_visitors
+            FROM members m
+            WHERE m.is_visiting = TRUE
+              AND DATE_PART('year', AGE(date_of_birth)) >= 18
+        `;
+        const conditions = [];
+
+        // Filter by startDate and endDate if provided
+        if (startDate) conditions.push(`m.membership_date >= '${startDate}'::DATE`);
+        if (endDate) conditions.push(`m.membership_date <= '${endDate}'::DATE`);
+
+        // Filter by year and month if provided
+        if (year) conditions.push(`EXTRACT(YEAR FROM m.membership_date) = ${year}`);
+        if (month) conditions.push(`EXTRACT(MONTH FROM m.membership_date) = ${month}`);
+
+        if (conditions.length > 0) {
+            query += ' AND ' + conditions.join(' AND ');
+        }
+
+        const result = await pool.query(query);
+        res.json({
+            status: 'success',
+            data: { total_visitors: result.rows[0].total_visitors }
+        });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
-  });
+});
+
 
 // retentation rate by month 
-  app.get('/api/retention-rate', async (req, res) => {
+app.get('/api/retention-rate', async (req, res) => {
+    const { year } = req.query;
+
     try {
-        const result = await pool.query(`
+        let query = `
             SELECT
                 TO_CHAR(dc.start_date, 'YYYY-MM-DD') AS start_date, -- Use full date
-                COUNT(DISTINCT m.member_id)::INTEGER  AS total_members,
-                COUNT(DISTINCT CASE WHEN m.completed_class = TRUE THEN m.member_id END)::INTEGER  AS completed_members,
-                COUNT(DISTINCT CASE WHEN m.completed_class = FALSE THEN m.member_id END)::INTEGER  AS dropped_out_members,
+                COUNT(DISTINCT m.member_id)::INTEGER AS total_members,
+                COUNT(DISTINCT CASE WHEN m.completed_class = TRUE THEN m.member_id END)::INTEGER AS completed_members,
+                COUNT(DISTINCT CASE WHEN m.completed_class = FALSE THEN m.member_id END)::INTEGER AS dropped_out_members,
                 COUNT(DISTINCT CASE WHEN m.completed_class = TRUE AND m.gender = 'Male' THEN m.member_id END)::INTEGER AS male_completed,
                 COUNT(DISTINCT CASE WHEN m.completed_class = TRUE AND m.gender = 'Female' THEN m.member_id END)::INTEGER AS female_completed,
                 ROUND(
@@ -568,12 +716,24 @@ app.get('/api/just-visiting', async (req, res) => {
             FROM
                 discipleship_classes dc
             LEFT JOIN members m ON m.discipleship_class_id = dc.class_id
+            WHERE
+                m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Only members aged 18 or older
+        `;
+
+        if (year) {
+            query += ` AND EXTRACT(YEAR FROM dc.start_date) = ${year}`;
+        }
+
+        query += `
             GROUP BY
                 TO_CHAR(dc.start_date, 'YYYY-MM-DD') -- Group by full date
             ORDER BY
                 start_date; -- Order by the full date
-        `);
-    
+        `;
+
+        const result = await pool.query(query);
+
         res.json({ status: 'success', data: result.rows });
     } catch (err) {
         console.error(err);
@@ -582,9 +742,11 @@ app.get('/api/just-visiting', async (req, res) => {
 });
 
  // overall-retention rate  
-app.get('/api/overall-retention-rate', async (req, res) => {
+ app.get('/api/overall-retention-rate', async (req, res) => {
+    const { year } = req.query;
+
     try {
-        const result = await pool.query(`
+        let query = `
             SELECT
                 COUNT(DISTINCT m.member_id) AS total_members,
                 COUNT(DISTINCT CASE WHEN m.completed_class = TRUE THEN m.member_id END)::INTEGER AS completed_members,
@@ -596,9 +758,18 @@ app.get('/api/overall-retention-rate', async (req, res) => {
             FROM
                 members m
             WHERE
-                m.discipleship_class_id IS NOT NULL;
-        `);
-    
+                m.discipleship_class_id IS NOT NULL
+                AND m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Only members aged 18 or older
+        `;
+
+        // Add year filter if provided
+        if (year) {
+            query += ` AND EXTRACT(YEAR FROM m.membership_date) = ${year}`;
+        }
+
+        const result = await pool.query(query);
+
         res.json({
             status: 'success',
             data: {
@@ -613,6 +784,7 @@ app.get('/api/overall-retention-rate', async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
+
  
 // Getting all discipleship classes with total member count
 app.get('/api/discipleship-classes2', async (req, res) => {
@@ -622,7 +794,12 @@ app.get('/api/discipleship-classes2', async (req, res) => {
                 dc.class_id,
                 dc.class_name,
                 dc.instructor,
-                COUNT(m.member_id)::INTEGER AS total_members
+                COUNT(
+                    CASE 
+                        WHEN m.is_visiting = FALSE 
+                             AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 THEN m.member_id
+                    END
+                )::INTEGER AS total_members
             FROM
                 discipleship_classes dc
             LEFT JOIN members m ON dc.class_id = m.discipleship_class_id
@@ -674,10 +851,10 @@ app.get('/api/generate-class-name', async (req, res) => {
 
 // Add Discipleship Class API
 app.post('/api/discipleship-classes_add', async (req, res) => {
-    const { class_name, instructor, creation_date, end_date, description, type } = req.body;
+    const { class_name, instructor, creation_date, end_date, description, type, class_time, class_days } = req.body;
 
     // Validate request body
-    if (!class_name || !instructor || !creation_date || !end_date || !type) {
+    if (!class_name || !instructor || !creation_date || !end_date || !type || !class_time || !class_days) {
         return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
@@ -686,17 +863,22 @@ app.post('/api/discipleship-classes_add', async (req, res) => {
         return res.status(400).json({ status: 'error', message: "Type must be either 'Virtual' or 'Physical'" });
     }
 
+    // Validate 'class_days' as an array
+    if (!Array.isArray(class_days) || class_days.length === 0) {
+        return res.status(400).json({ status: 'error', message: 'Class days must be a non-empty array' });
+    }
+
     try {
         // Get the current maximum class_id
         const maxIdResult = await pool.query(`SELECT MAX(class_id) AS max_id FROM discipleship_classes;`);
         const nextClassId = (maxIdResult.rows[0].max_id || 0) + 1; // Default to 1 if table is empty
 
-        // Insert the new class
+        // Insert the new class with status = 'ongoing'
         const result = await pool.query(
-            `INSERT INTO discipleship_classes (class_id, class_name, instructor, start_date, end_date, description, type)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `INSERT INTO discipleship_classes (class_id, class_name, instructor, start_date, end_date, description, type, class_time, class_days, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
              RETURNING *;`,
-            [nextClassId, class_name, instructor, creation_date, end_date, description || null, type]
+            [nextClassId, class_name, instructor, creation_date, end_date, description || null, type, class_time, class_days, 'ongoing']
         );
 
         res.status(201).json({
@@ -740,7 +922,7 @@ app.get('/api/absentees-list', async (req, res) => {
     }
 });
 
-// discipleship class Monthly Completion Stats or use the retention api 
+// discipleship class Monthly Completion Stats (Age) with year filter 
 app.get('/api/monthly-completed-stats', async (req, res) => {
     const { year } = req.query; // Get year from query parameter
 
@@ -752,17 +934,27 @@ app.get('/api/monthly-completed-stats', async (req, res) => {
         const result = await pool.query(`
             SELECT
                 TO_CHAR(m.membership_date, 'YYYY-MM') AS month,
+                CASE
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 36 AND 49 THEN '36-49'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 50 AND 64 THEN '50-64'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) >= 65 THEN '65+'
+                END AS age_group,
                 COUNT(CASE WHEN m.completed_class = TRUE AND m.gender = 'Male' THEN 1 END)::INTEGER AS male_completed_count,
                 COUNT(CASE WHEN m.completed_class = TRUE AND m.gender = 'Female' THEN 1 END)::INTEGER AS female_completed_count
             FROM
                 members m
             WHERE
                 m.discipleship_class_id IS NOT NULL
+                AND m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Include only members aged 18+
                 AND EXTRACT(YEAR FROM m.membership_date) = $1
             GROUP BY
-                TO_CHAR(m.membership_date, 'YYYY-MM')
+                TO_CHAR(m.membership_date, 'YYYY-MM'),
+                age_group
             ORDER BY
-                month;
+                month, age_group;
         `, [targetYear]); // Pass the target year to the query
 
         res.status(200).json({
@@ -775,6 +967,7 @@ app.get('/api/monthly-completed-stats', async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
+
 
 // fellowship ministry
 app.get('/api/fellowship-members-per-month', async (req, res) => {
@@ -813,53 +1006,129 @@ app.get('/api/fellowship-members-per-month', async (req, res) => {
     }
 });
 
-// Age distribution based on completed and not completed discipleship classes
+
+// Age distribution based on completed and not completed discipleship classes, grouped by year and age group
 app.get('/api/members/age-distribution-dis', async (req, res) => {
+    const { year } = req.query; // Get the year from the query parameters
+
     try {
         const query = `
             SELECT
+                EXTRACT(YEAR FROM m.membership_date) AS year,
                 CASE
-                    WHEN DATE_PART('year', AGE(date_of_birth)) = 0 AND DATE_PART('month', AGE(date_of_birth)) BETWEEN 1 AND 11 THEN '1-11 M'
-                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 1 AND 5 THEN '1-5' 
-                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 6 AND 10 THEN '6-10'
-                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 11 AND 17 THEN '11-17'
-                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
-                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
-                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 36 AND 49 THEN '36-49'
-                    WHEN DATE_PART('year', AGE(date_of_birth)) >= 50 THEN '50+'
-                    ELSE 'Unknown'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 36 AND 49 THEN '36-49'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 50 AND 64 THEN '50-64'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) >= 65 THEN '65+'
                 END AS age_range,
-                COUNT(CASE WHEN completed_class = TRUE THEN 1 END) ::INTEGER AS completed_count,
-                COUNT(CASE WHEN completed_class = FALSE THEN 1 END) ::INTEGER AS not_completed_count
-            FROM members
-            GROUP BY age_range
-            ORDER BY age_range;
+                COUNT(CASE WHEN m.completed_class = TRUE AND m.gender = 'Male' THEN 1 END)::INTEGER AS male_completed_count,
+                COUNT(CASE WHEN m.completed_class = TRUE AND m.gender = 'Female' THEN 1 END)::INTEGER AS female_completed_count,
+                COUNT(CASE WHEN m.completed_class = FALSE AND m.gender = 'Male' THEN 1 END)::INTEGER AS male_not_completed_count,
+                COUNT(CASE WHEN m.completed_class = FALSE AND m.gender = 'Female' THEN 1 END)::INTEGER AS female_not_completed_count
+            FROM
+                members m
+            WHERE
+                m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Only include members aged 18+
+                ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''} -- Filter by year if provided
+            GROUP BY
+                year, age_range
+            ORDER BY
+                year, age_range;
         `;
+
         const result = await pool.query(query);
-        res.json({ status: 'success', data: result.rows });
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: year || 'All Years' // Include year information in the response
+        });
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server Error');
     }
 });
 
-// work status dis
+// Age distribution based on completed and not completed discipleship classes, grouped by year and age group
+app.get('/api/members/age-distribution-dis2', async (req, res) => {
+    const { year } = req.query; // Get the year from the query parameters
+
+    // Use the current year if no year is provided
+    const currentYear = new Date().getFullYear();
+    const targetYear = year ? parseInt(year, 10) : currentYear;
+
+    try {
+        const query = `
+            SELECT
+                EXTRACT(YEAR FROM m.membership_date) AS year,
+                CASE
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 36 AND 49 THEN '36-49'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 50 AND 64 THEN '50-64'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) >= 65 THEN '65+'
+                END AS age_range,
+                COUNT(CASE WHEN m.completed_class = TRUE AND m.gender = 'Male' THEN 1 END)::INTEGER AS male_completed_count,
+                COUNT(CASE WHEN m.completed_class = TRUE AND m.gender = 'Female' THEN 1 END)::INTEGER AS female_completed_count,
+                COUNT(CASE WHEN m.completed_class = FALSE AND m.gender = 'Male' THEN 1 END)::INTEGER AS male_not_completed_count,
+                COUNT(CASE WHEN m.completed_class = FALSE AND m.gender = 'Female' THEN 1 END)::INTEGER AS female_not_completed_count
+            FROM
+                members m
+            WHERE
+                m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Only include members aged 18+
+                AND EXTRACT(YEAR FROM m.membership_date) = $1 -- Filter by target year
+            GROUP BY
+                year, age_range
+            ORDER BY
+                year, age_range;
+        `;
+
+        const result = await pool.query(query, [targetYear]); // Pass the target year to the query
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: targetYear // Include the year in the response
+        });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+
+
+// work status distribution-discipleship classes
 app.get('/api/members/work-status-dis', async (req, res) => {
+    const { year } = req.query; // Get the year from the query parameters
+
     try {
         const query = `
             SELECT 
                 occupation_status,
-                COUNT(CASE WHEN completed_class = TRUE THEN 1 END)::INTEGER AS completed_count,
-                COUNT(CASE WHEN completed_class = FALSE THEN 1 END)::INTEGER AS not_completed_count
+                COUNT(CASE WHEN completed_class = TRUE AND gender = 'Male' THEN 1 END)::INTEGER AS male_completed_count,
+                COUNT(CASE WHEN completed_class = TRUE AND gender = 'Female' THEN 1 END)::INTEGER AS female_completed_count,
+                COUNT(CASE WHEN completed_class = FALSE AND gender = 'Male' THEN 1 END)::INTEGER AS male_not_completed_count,
+                COUNT(CASE WHEN completed_class = FALSE AND gender = 'Female' THEN 1 END)::INTEGER AS female_not_completed_count
             FROM 
                 members
+            WHERE 
+                is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(date_of_birth)) >= 18 -- Include only members aged 18+
+                ${year ? `AND EXTRACT(YEAR FROM membership_date) = ${year}` : ''} -- Filter by year if provided
             GROUP BY 
                 occupation_status
             ORDER BY 
                 occupation_status;
         `;
+
         const result = await pool.query(query);
-        res.json({ status: 'success', data: result.rows });
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: year || 'All Years' // Include the year or indicate "All Years"
+        });
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server Error');
@@ -868,14 +1137,24 @@ app.get('/api/members/work-status-dis', async (req, res) => {
 
 
 //service list 
+// Service ministries list with member filtering
 app.get('/api/service-ministries', async (req, res) => {
+    const { year } = req.query; // Get the year from the query parameters
+
     try {
-        const result = await pool.query(`
+        const query = `
             SELECT
                 min.ministry_id,
                 min.ministry_name,
                 min.leader_name AS instructor,
-                COUNT(m.member_id) AS total_members
+                COUNT(
+                    CASE 
+                        WHEN m.is_visiting = FALSE 
+                             AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 
+                             ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''}
+                        THEN m.member_id
+                    END
+                )::INTEGER AS total_members
             FROM
                 ministries min
             LEFT JOIN members m ON min.ministry_id = m.assigned_ministry_id
@@ -885,80 +1164,319 @@ app.get('/api/service-ministries', async (req, res) => {
                 min.ministry_id, min.ministry_name, min.leader_name
             ORDER BY
                 min.ministry_id;
-        `);
+        `;
 
-        res.json({ status: 'success', data: result.rows });
+        const result = await pool.query(query);
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: year || 'All Years' // Include the year or indicate "All Years"
+        });
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Internal Server Error');
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
 
-// age distribution 
 
+// age distribution 
+// Age distribution for service ministries
 app.get('/api/service-ministries/age-distribution', async (req, res) => {
+    const { year } = req.query; // Get the year from the query parameters
+
     try {
-        const result = await pool.query(`
+        const query = `
             SELECT
                 min.ministry_name,
                 CASE
-                    WHEN DATE_PART('year', AGE(m.date_of_birth)) = 0 AND DATE_PART('month', AGE(m.date_of_birth)) BETWEEN 1 AND 11 THEN '1-11 M'
-                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 1 AND 5 THEN '1-5'
-                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 6 AND 10 THEN '6-10'
-                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 11 AND 17 THEN '11-17'
                     WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
                     WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
                     WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 36 AND 49 THEN '36-49'
-                    WHEN DATE_PART('year', AGE(m.date_of_birth)) >= 50 THEN '50+'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 50 AND 64 THEN '50-64'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) >= 65 THEN '65+'
                     ELSE 'Unknown'
                 END AS age_range,
-                COUNT(m.member_id) AS total
+                COUNT(m.member_id)::INTEGER AS total
             FROM
                 members m
             JOIN ministries min ON m.assigned_ministry_id = min.ministry_id
             WHERE
-                min.type = 'Service'
+                min.type = 'Service' -- Only service ministries
+                AND m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Include only members aged 18+
+                ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''} -- Filter by year if provided
             GROUP BY
                 min.ministry_name, age_range
             ORDER BY
                 min.ministry_name, age_range;
-        `);
+        `;
 
-        res.json({ status: 'success', data: result.rows });
+        const result = await pool.query(query);
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: year || 'All Years' // Include year or indicate "All Years"
+        });
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Internal Server Error');
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
 
 
-// work status service
 
+// work status service
+// Work status distribution for service ministries
 app.get('/api/service-ministries/work-status', async (req, res) => {
+    const { year } = req.query; // Get the year from the query parameters
+
     try {
-        const result = await pool.query(`
+        const query = `
             SELECT
                 min.ministry_name,
                 m.occupation_status,
-                COUNT(m.member_id) AS total
+                COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::INTEGER AS male_count,
+                COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::INTEGER AS female_count
             FROM
                 members m
             JOIN ministries min ON m.assigned_ministry_id = min.ministry_id
             WHERE
-                min.type = 'Service'
+                min.type = 'Service' -- Only service ministries
+                AND m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Include only members aged 18+
+                ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''} -- Filter by year if provided
             GROUP BY
                 min.ministry_name, m.occupation_status
             ORDER BY
-                min.ministry_name, total DESC;
-        `);
+                min.ministry_name,
+                COUNT(CASE WHEN m.gender = 'Male' THEN 1 END) + COUNT(CASE WHEN m.gender = 'Female' THEN 1 END) DESC; -- Use expression in ORDER BY
+        `;
 
-        res.json({ status: 'success', data: result.rows });
+        const result = await pool.query(query);
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: year || 'All Years' // Include year or indicate "All Years"
+        });
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Internal Server Error');
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
 
+
+// update the discipleship-classes end-date 
+app.put('/api/discipleship-classes/:id/end-date', async (req, res) => {
+    const { id } = req.params;
+    const { end_date } = req.body;
+
+    try {
+        // Update end_date and status based on the new end_date
+        const result = await pool.query(`
+            UPDATE discipleship_classes
+            SET end_date = $1,
+                status = CASE
+                    WHEN $1 < CURRENT_DATE THEN 'completed'
+                    ELSE 'ongoing'
+                END
+            WHERE class_id = $2
+            RETURNING *;
+        `, [end_date, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Class not found' });
+        }
+
+        res.json({ status: 'success', data: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+
+// update discipleship-classes meeting times 
+app.put('/api/discipleship-classes/:id/time', async (req, res) => {
+    const { id } = req.params;
+    const { class_time } = req.body;
+
+    if (!class_time) {
+        return res.status(400).json({ status: 'error', message: 'Class time is required' });
+    }
+
+    try {
+        const result = await pool.query(`
+            UPDATE discipleship_classes
+            SET class_time = $1
+            WHERE class_id = $2
+            RETURNING *;
+        `, [class_time, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Class not found' });
+        }
+
+        res.json({ status: 'success', data: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+// update discipleship-classes days 
+app.put('/api/discipleship-classes/:id/days', async (req, res) => {
+    const { id } = req.params;
+    const { class_days } = req.body;
+
+    if (!Array.isArray(class_days) || class_days.length === 0) {
+        return res.status(400).json({ status: 'error', message: 'Class days must be a non-empty array' });
+    }
+
+    try {
+        const result = await pool.query(`
+            UPDATE discipleship_classes
+            SET class_days = $1
+            WHERE class_id = $2
+            RETURNING *;
+        `, [class_days, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Class not found' });
+        }
+
+        res.json({ status: 'success', data: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+// Check the available disclipship classes
+app.get('/api/available-classes', async (req, res) => {
+    const { days } = req.query; // Number of days passed as query parameter
+    const intervalDays = days ? parseInt(days, 10) : 10; // Default to 10 days if not provided
+
+    if (isNaN(intervalDays) || intervalDays < 0) {
+        return res.status(400).json({ status: 'error', message: 'Invalid number of days' });
+    }
+
+    try {
+        const result = await pool.query(`
+            SELECT
+                class_id,
+                class_name,
+                instructor,
+                start_date,
+                end_date,
+                status
+            FROM
+                discipleship_classes
+            WHERE
+                status = 'ongoing'
+                AND start_date >= CURRENT_DATE - $1 * INTERVAL '1 day';
+        `, [intervalDays]);
+
+        res.status(200).json({
+            status: 'success',
+            data: result.rows,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+// api for updating start_date (for testing only): DO NOT USE **** DO NOT USE 
+
+app.put('/api/discipleship-classes/:id/start-date', async (req, res) => {
+    const { id } = req.params;
+    const { start_date } = req.body;
+
+    if (!start_date) {
+        return res.status(400).json({ status: 'error', message: 'Start date is required' });
+    }
+
+    try {
+        const result = await pool.query(`
+            UPDATE discipleship_classes
+            SET start_date = $1
+            WHERE class_id = $2
+            RETURNING *;
+        `, [start_date, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Class not found' });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Start date updated successfully',
+            data: result.rows[0],
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+// Api for admin to create  login 
+app.post('/api/users/create', authenticateAdmin, async (req, res) => {
+    const { userfname, password, role, contact_details, phone_no } = req.body;
+
+    // Validate input
+    if (!userfname || !password || !role || !contact_details || !phone_no) {
+        return res.status(400).json({ status: 'error', message: 'All fields are required' });
+    }
+
+    // Validate role
+    const allowedRoles = ['Admin', 'Pastor', 'Leader'];
+    if (!allowedRoles.includes(role)) {
+        return res.status(403).json({ status: 'error', message: 'Invalid role specified' });
+    }
+
+    try {
+        // Fetch the current maximum user_id
+        const maxIdResult = await pool.query('SELECT MAX(user_id) AS max_id FROM users');
+        const nextUserId = (maxIdResult.rows[0].max_id || 0) + 1;
+
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Insert the new user into the database
+        const result = await pool.query(`
+            INSERT INTO users (user_id, username, password, role, contact_details, phone_no, date_created)
+            VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+            RETURNING *;
+        `, [nextUserId, userfname, hashedPassword, role, contact_details, phone_no]);
+
+        // Generate JWT token for the new user
+        const token = jwt.sign(
+            { userId: result.rows[0].user_id, username: result.rows[0].username, role: result.rows[0].role },
+            JWT_SECRET,
+            { expiresIn: JWT_EXPIRES_IN }
+        );
+
+        res.status(201).json({
+            status: 'success',
+            message: 'User account created successfully',
+            data: {
+                user_id: result.rows[0].user_id,
+                userfname: result.rows[0].userfname,
+                role: result.rows[0].role,
+                contact_details: result.rows[0].contact_details,
+                phone_no: result.rows[0].phone_no,
+                date_created: result.rows[0].date_created,
+                token // Return the token
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
 
 // Start the server
 app.listen(PORT, () => {
