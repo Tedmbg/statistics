@@ -87,7 +87,7 @@ export default function SideBar(isvisible) {
             active={checkActive("/addMember")}
             icon={<ArrowRightOutlinedIcon />}
           >
-            Add Member
+            Member Access
           </MenuItem>
           <MenuItem
             component={<NavLink to="baptism" />}

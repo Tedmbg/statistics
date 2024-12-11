@@ -79,10 +79,17 @@ export default function MemberManagement() {
 // MemberManagement.js
 
 const handleEditMember = (member) => {
+  // Split the full name into firstName, middleName, and lastName
+  const nameParts = member.name ? member.name.split(' ') : [];
+
+  const firstName = nameParts[0] || '';
+  const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';  // Everything between first and last name
+  const lastName = nameParts[nameParts.length - 1] || '';
+
   const mappedData = {
-    firstName: member.first_name || "",
-    middleName: member.middle_name || "",
-    lastName: member.last_name || "",
+    firstName,  // Set firstName from nameParts
+    middleName,  // Set middleName from nameParts
+    lastName,  // Set lastName from nameParts
     dob: member.date_of_birth || "",
     contactInfo: member.contact_info || "",
     gender: member.gender || "",
@@ -109,6 +116,7 @@ const handleEditMember = (member) => {
   setEditingMember(mappedData);
   setShowAddMemberForm(true);
 };
+
 
 
   const handleCancelChange = (memberId) => {

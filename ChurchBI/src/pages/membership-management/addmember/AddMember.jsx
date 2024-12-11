@@ -118,11 +118,7 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
         serviceCategory: initialData.serviceCategory || "",
         serviceRole: initialData.serviceRole || "",
         conversionDate: initialData.conversionDate || '',
-        nextOfKin: {
-          firstName: initialData.nextOfKin?.firstName || '',
-          lastName: initialData.nextOfKin?.lastName || '',
-          contactInfo: initialData.nextOfKin?.contactInfo || '',
-        },
+        nextOfKin: initialData.nextOfKin || { firstName: "", lastName: "", contactInfo: "" },
         volunteeringRole: initialData.volunteeringRole || '',
       };
       dispatch({ type: 'SET_INITIAL_DATA', payload: mappedData });
@@ -172,7 +168,7 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
         sir_name: formData.firstName,
         middle_name: formData.middleName,
         last_name: formData.lastName,
-        date_of_birth: formData.dob || null,
+        date_of_birth: formData.dob,
         contact_info: formData.contactInfo,
         gender: formData.gender,
         location: formData.location,
@@ -490,7 +486,7 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="Next of Kin First Name"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
-                    value={formData.nextOfKin.firstName}
+                    value={formData.nextOfKinFirstName || ''}
                     onChange={(e) => handleInputChange("nextOfKin", e.target.value, "firstName")}
                   />
                 </Grid>
@@ -500,7 +496,7 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="Next of Kin Last Name"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
-                    value={formData.nextOfKin.lastName}
+                    value={formData.nextOfKinLastName || ''}
                     onChange={(e) => handleInputChange("nextOfKin", e.target.value, "lastName")}
                   />
                 </Grid>
@@ -510,7 +506,7 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="Next of Kin Contact Info"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
-                    value={formData.nextOfKin.contactInfo}
+                    value={formData.nextOfKinContactInfo || ''}
                     onChange={(e) => handleInputChange("nextOfKin", e.target.value, "contactInfo")}
                   />
                 </Grid>
@@ -766,6 +762,7 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
 
 AddMemberForm.propTypes = {
   initialData: PropTypes.shape({
+    id: PropTypes.number, 
     firstName: PropTypes.string,
     middleName: PropTypes.string,
     lastName: PropTypes.string,
