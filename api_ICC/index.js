@@ -67,26 +67,27 @@ cron.schedule('0 0 * * *', async () => {
     }
 });
 
-const authenticateAdmin = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+const authenticateAdmin = async (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
 
     if (!token) {
-        return res.status(401).json({ status: 'error', message: 'Unauthorized: No token provided' });
+        return res.status(401).json({ status: 'error', message: 'Unauthorized. Token is missing.' });
     }
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ status: 'error', message: 'Forbidden: Invalid token' });
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+
+        // Check if the user has an admin role
+        if (decoded.role !== 'Admin') {
+            return res.status(403).json({ status: 'error', message: 'Access denied. Admins only.' });
         }
 
-        if (user.role !== 'Admin') {
-            return res.status(403).json({ status: 'error', message: 'Access denied: Admins only' });
-        }
-
-        req.user = user; // Attach user info to the request
+        req.user = decoded; // Attach decoded user information to the request
         next();
-    });
+    } catch (err) {
+        console.error(err);
+        return res.status(401).json({ status: 'error', message: 'Unauthorized. Invalid token.' });
+    }
 };
 
 // Sample route
@@ -1551,8 +1552,68 @@ app.get('/api/volunteers/total-count', async (req, res) => {
     }
 });
 
+// Login API with Role Validation
+app.post('/api/users/login', async (req, res) => {
+    const { email, password } = req.body;
 
-// Api for admin to create  login 
+    // Validate input
+    if (!email || !password) {
+        return res.status(400).json({ status: 'error', message: 'Email and password are required' });
+    }
+
+    try {
+        // Fetch user by contact_details (email)
+        const userQuery = `
+            SELECT user_id, contact_details AS email, password, role
+            FROM users
+            WHERE contact_details = $1
+        `;
+        const userResult = await pool.query(userQuery, [email]);
+
+        if (userResult.rows.length === 0) {
+            return res.status(401).json({ status: 'error', message: 'Invalid email or password' });
+        }
+
+        const user = userResult.rows[0];
+
+        // Check if the user has a valid role
+        const allowedRoles = ['Admin', 'Pastor', 'Leader'];
+        if (!allowedRoles.includes(user.role)) {
+            return res.status(403).json({ status: 'error', message: 'Access denied. Invalid role.' });
+        }
+
+        // Compare passwords
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ status: 'error', message: 'Invalid email or password' });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { userId: user.user_id, email: user.email, role: user.role },
+            JWT_SECRET,
+            { expiresIn: JWT_EXPIRES_IN }
+        );
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Login successful',
+            data: {
+                user_id: user.user_id,
+                email: user.email,
+                role: user.role,
+                token
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+
+// Create User API Restricted to Admins
 app.post('/api/users/create', authenticateAdmin, async (req, res) => {
     const { userfname, password, role, contact_details, phone_no } = req.body;
 
@@ -1594,12 +1655,12 @@ app.post('/api/users/create', authenticateAdmin, async (req, res) => {
             message: 'User account created successfully',
             data: {
                 user_id: result.rows[0].user_id,
-                userfname: result.rows[0].userfname,
+                username: result.rows[0].username,
                 role: result.rows[0].role,
                 contact_details: result.rows[0].contact_details,
                 phone_no: result.rows[0].phone_no,
                 date_created: result.rows[0].date_created,
-                token // Return the token
+                token
             }
         });
     } catch (err) {
@@ -1607,6 +1668,151 @@ app.post('/api/users/create', authenticateAdmin, async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
+
+
+
+// Create User API (Without Authentication for Testing) For Backend testing only **** DO NOT USE****, USE ABOVE
+app.post('/api/users/create/test', async (req, res) => {
+    const { userfname, password, role, contact_details, phone_no } = req.body;
+
+    // Validate input
+    if (!userfname || !password || !role || !contact_details || !phone_no) {
+        return res.status(400).json({ status: 'error', message: 'All fields are required' });
+    }
+
+    // Validate role
+    const allowedRoles = ['Admin', 'Pastor', 'Leader'];
+    if (!allowedRoles.includes(role)) {
+        return res.status(403).json({ status: 'error', message: 'Invalid role specified' });
+    }
+
+    try {
+        // Fetch the current maximum user_id
+        const maxIdResult = await pool.query('SELECT MAX(user_id) AS max_id FROM users');
+        const nextUserId = (maxIdResult.rows[0].max_id || 0) + 1;
+
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Insert the new user into the database
+        const result = await pool.query(`
+            INSERT INTO users (user_id, username, password, role, contact_details, phone_no, date_created)
+            VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+            RETURNING *;
+        `, [nextUserId, userfname, hashedPassword, role, contact_details, phone_no]);
+
+        res.status(201).json({
+            status: 'success',
+            message: 'User account created successfully',
+            data: {
+                user_id: result.rows[0].user_id,
+                username: result.rows[0].username,
+                role: result.rows[0].role,
+                contact_details: result.rows[0].contact_details,
+                phone_no: result.rows[0].phone_no,
+                date_created: result.rows[0].date_created
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+app.get('/api/members/:id', async (req, res) => {
+    const memberId = req.params.id;
+    
+    try {
+      // Fetch member data
+      const memberQuery = 'SELECT * FROM members WHERE member_id = $1';
+      const memberResult = await pool.query(memberQuery, [memberId]);
+  
+      if (memberResult.rowCount === 0) {
+        return res.status(404).json({ error: 'Member not found' });
+      }
+  
+      const member = memberResult.rows[0];
+  
+      // Fetch next of kin data from the next_of_kin table
+      const nextOfKinQuery = 'SELECT * FROM next_of_kin WHERE member_id = $1';
+      const nextOfKinResult = await pool.query(nextOfKinQuery, [memberId]);
+  
+      const nextOfKin = nextOfKinResult.rows[0] || {}; // Use the first result or an empty object if none found
+  
+      // Combine member and next of kin data
+      const responseData = {
+        ...member,
+        nextOfKinFirstName: nextOfKin.first_name || '',
+        nextOfKinLastName: nextOfKin.last_name || '',
+        nextOfKinContactInfo: nextOfKin.contact_info || '',
+      };
+  
+      res.json(responseData); // Send the combined data back to the frontend
+    } catch (error) {
+      console.error('Error fetching member data:', error.message);
+      res.status(500).json({ error: 'Error fetching member details' });
+    }
+  });
+
+
+// Token Validation API
+app.post('/api/validate-token', (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1]; // Extract token from Authorization header
+
+    if (!token) {
+        return res.status(401).json({ status: 'error', message: 'Token is missing' });
+    }
+
+    try {
+        // Verify the token
+        const decoded = jwt.verify(token, JWT_SECRET);
+
+        // Respond with the decoded token data
+        res.status(200).json({
+            status: 'success',
+            message: 'Token is valid',
+            data: {
+                userId: decoded.userId,
+                username: decoded.username,
+                role: decoded.role,
+                exp: decoded.exp
+            }
+        });
+    } catch (err) {
+        console.error('Token validation error:', err.message);
+
+        // Handle invalid or expired tokens
+        res.status(401).json({ status: 'error', message: 'Invalid or expired token' });
+    }
+});
+
+
+// Role-Based Access Control API
+app.get('/api/users/role', (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1]; // Extract token
+
+    if (!token) {
+        return res.status(401).json({ status: 'error', message: 'Token is missing' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET); // Verify and decode token
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                userId: decoded.userId,
+                username: decoded.username,
+                role: decoded.role
+            }
+        });
+    } catch (err) {
+        console.error('Role-based access control error:', err.message);
+        res.status(401).json({ status: 'error', message: 'Invalid or expired token' });
+    }
+});
+
 
 // Start the server
 app.listen(PORT, () => {
