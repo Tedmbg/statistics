@@ -850,11 +850,12 @@ app.get('/api/generate-class-name', async (req, res) => {
   
 
 // Add Discipleship Class API
+// Add Discipleship Class API with class days  changed  to INEGER
 app.post('/api/discipleship-classes_add', async (req, res) => {
-    const { class_name, instructor, creation_date, end_date, description, type, class_time, class_days } = req.body;
+    const { class_name, instructor, creation_date, end_date, description, type, class_time, class_day } = req.body;
 
     // Validate request body
-    if (!class_name || !instructor || !creation_date || !end_date || !type || !class_time || !class_days) {
+    if (!class_name || !instructor || !creation_date || !end_date || !type || !class_time || class_day == null) {
         return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
@@ -863,9 +864,9 @@ app.post('/api/discipleship-classes_add', async (req, res) => {
         return res.status(400).json({ status: 'error', message: "Type must be either 'Virtual' or 'Physical'" });
     }
 
-    // Validate 'class_days' as an array
-    if (!Array.isArray(class_days) || class_days.length === 0) {
-        return res.status(400).json({ status: 'error', message: 'Class days must be a non-empty array' });
+    // Validate 'class_day' as a number between 1 and 7
+    if (!Number.isInteger(class_day) || class_day < 1 || class_day > 7) {
+        return res.status(400).json({ status: 'error', message: 'Class day must be an integer between 1 (Monday) and 7 (Sunday)' });
     }
 
     try {
@@ -875,10 +876,10 @@ app.post('/api/discipleship-classes_add', async (req, res) => {
 
         // Insert the new class with status = 'ongoing'
         const result = await pool.query(
-            `INSERT INTO discipleship_classes (class_id, class_name, instructor, start_date, end_date, description, type, class_time, class_days, status)
+            `INSERT INTO discipleship_classes (class_id, class_name, instructor, start_date, end_date, description, type, class_time, class_day, status)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
              RETURNING *;`,
-            [nextClassId, class_name, instructor, creation_date, end_date, description || null, type, class_time, class_days, 'ongoing']
+            [nextClassId, class_name, instructor, creation_date, end_date, description || null, type, class_time, class_day, 'ongoing']
         );
 
         res.status(201).json({
@@ -891,6 +892,7 @@ app.post('/api/discipleship-classes_add', async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
+
 
 //Fetching Absentees(still being worked on)
 app.get('/api/absentees-list', async (req, res) => {
