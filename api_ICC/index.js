@@ -431,7 +431,7 @@ app.get('/api/members/age-distribution', async (req, res) => {
     }
 });
 
-
+// work status 
 app.get('/api/members/work-status', async (req, res) => {
     try {
         const query = `
@@ -448,6 +448,8 @@ app.get('/api/members/work-status', async (req, res) => {
     }
 });
 
+
+//gender distribution 
 app.get('/api/members/gender-distribution', async (req, res) => {
     try {
         const query = `
@@ -463,7 +465,7 @@ app.get('/api/members/gender-distribution', async (req, res) => {
     }
 });
 
-
+//marital status
 app.get('/api/members/marital-status', async (req, res) => {
     try {
         const query = `
@@ -482,7 +484,7 @@ app.get('/api/members/marital-status', async (req, res) => {
     }
 });
 
-
+// residence 
 app.get('/api/members/residence', async (req, res) => {
     try {
         const query = `
@@ -498,6 +500,8 @@ app.get('/api/members/residence', async (req, res) => {
     }
 });
 
+
+// country of orgin 
 app.get('/api/members/county-origin', async (req, res) => {
     try {
         const query = `
@@ -513,6 +517,8 @@ app.get('/api/members/county-origin', async (req, res) => {
     }
 });
 
+
+//memebrs monthly 
 
 app.get('/api/members/monthly', async (req, res) => {
     let { year } = req.query;
@@ -543,7 +549,7 @@ app.get('/api/members/monthly', async (req, res) => {
     }
 });
 
-
+// bap monthly 
 app.get('/api/baptisms/monthly', async (req, res) => {
     const { year } = req.query;
     try {
@@ -691,16 +697,20 @@ app.get('/api/overall-retention-rate', async (req, res) => {
     }
 });
  
-// getting all discilpeship classes 
-app.get('/api/discipleship-classes', async (req, res) => {
+// Getting all discipleship classes with total member count
+app.get('/api/discipleship-classes2', async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT
                 dc.class_id,
                 dc.class_name,
-                dc.instructor
+                dc.instructor,
+                COUNT(m.member_id)::INTEGER AS total_members
             FROM
                 discipleship_classes dc
+            LEFT JOIN members m ON dc.class_id = m.discipleship_class_id
+            GROUP BY
+                dc.class_id, dc.class_name, dc.instructor
             ORDER BY
                 dc.class_id;
         `);
@@ -713,6 +723,37 @@ app.get('/api/discipleship-classes', async (req, res) => {
 });
 
 
+
+
+//generateUniqueClassName
+app.get('/api/generate-class-name', async (req, res) => {
+    const prefix = "ICC";
+    let className;
+    let isUnique = false;
+  
+    try {
+      while (!isUnique) {
+        const number = Math.floor(Math.random() * 100) + 100; // Random number between 100 and 199
+        className = `${prefix}${number}`;
+  
+        // Query the database to check if this class name already exists
+        const result = await pool.query(
+          `SELECT COUNT(*) FROM discipleship_classes WHERE class_name = $1`,
+          [className]
+        );
+  
+        if (parseInt(result.rows[0].count, 10) === 0) {
+          isUnique = true; // Name is unique
+        }
+      }
+  
+      res.status(200).json({ className }); // Send the unique class name
+    } catch (error) {
+      console.error("Error generating class name:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
+  
 
 // Add Discipleship Class API
 app.post('/api/discipleship-classes_add', async (req, res) => {
@@ -1013,6 +1054,152 @@ app.put('/api/members/:id', async (req, res) => {
             }
         }
 
+
+// Age distribution based on completed and not completed discipleship classes
+app.get('/api/members/age-distribution-dis', async (req, res) => {
+    try {
+        const query = `
+            SELECT
+                CASE
+                    WHEN DATE_PART('year', AGE(date_of_birth)) = 0 AND DATE_PART('month', AGE(date_of_birth)) BETWEEN 1 AND 11 THEN '1-11 M'
+                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 1 AND 5 THEN '1-5' 
+                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 6 AND 10 THEN '6-10'
+                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 11 AND 17 THEN '11-17'
+                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
+                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
+                    WHEN DATE_PART('year', AGE(date_of_birth)) BETWEEN 36 AND 49 THEN '36-49'
+                    WHEN DATE_PART('year', AGE(date_of_birth)) >= 50 THEN '50+'
+                    ELSE 'Unknown'
+                END AS age_range,
+                COUNT(CASE WHEN completed_class = TRUE THEN 1 END) ::INTEGER AS completed_count,
+                COUNT(CASE WHEN completed_class = FALSE THEN 1 END) ::INTEGER AS not_completed_count
+            FROM members
+            GROUP BY age_range
+            ORDER BY age_range;
+        `;
+        const result = await pool.query(query);
+        res.json({ status: 'success', data: result.rows });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// work status dis
+app.get('/api/members/work-status-dis', async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                occupation_status,
+                COUNT(CASE WHEN completed_class = TRUE THEN 1 END)::INTEGER AS completed_count,
+                COUNT(CASE WHEN completed_class = FALSE THEN 1 END)::INTEGER AS not_completed_count
+            FROM 
+                members
+            GROUP BY 
+                occupation_status
+            ORDER BY 
+                occupation_status;
+        `;
+        const result = await pool.query(query);
+        res.json({ status: 'success', data: result.rows });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+
+//service list 
+app.get('/api/service-ministries', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                min.ministry_id,
+                min.ministry_name,
+                min.leader_name AS instructor,
+                COUNT(m.member_id) AS total_members
+            FROM
+                ministries min
+            LEFT JOIN members m ON min.ministry_id = m.assigned_ministry_id
+            WHERE
+                min.type = 'Service'
+            GROUP BY
+                min.ministry_id, min.ministry_name, min.leader_name
+            ORDER BY
+                min.ministry_id;
+        `);
+
+        res.json({ status: 'success', data: result.rows });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+// age distribution 
+
+app.get('/api/service-ministries/age-distribution', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                min.ministry_name,
+                CASE
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) = 0 AND DATE_PART('month', AGE(m.date_of_birth)) BETWEEN 1 AND 11 THEN '1-11 M'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 1 AND 5 THEN '1-5'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 6 AND 10 THEN '6-10'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 11 AND 17 THEN '11-17'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 36 AND 49 THEN '36-49'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) >= 50 THEN '50+'
+                    ELSE 'Unknown'
+                END AS age_range,
+                COUNT(m.member_id) AS total
+            FROM
+                members m
+            JOIN ministries min ON m.assigned_ministry_id = min.ministry_id
+            WHERE
+                min.type = 'Service'
+            GROUP BY
+                min.ministry_name, age_range
+            ORDER BY
+                min.ministry_name, age_range;
+        `);
+
+        res.json({ status: 'success', data: result.rows });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+
+// work status service
+
+app.get('/api/service-ministries/work-status', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                min.ministry_name,
+                m.occupation_status,
+                COUNT(m.member_id) AS total
+            FROM
+                members m
+            JOIN ministries min ON m.assigned_ministry_id = min.ministry_id
+            WHERE
+                min.type = 'Service'
+            GROUP BY
+                min.ministry_name, m.occupation_status
+            ORDER BY
+                min.ministry_name, total DESC;
+        `);
+
+        res.json({ status: 'success', data: result.rows });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Internal Server Error');
+    }
+});
 
 
 // Start the server

@@ -4,6 +4,8 @@ import { Line } from 'react-chartjs-2'
 
 function LineChart({data,title}) {
     const lineChartOptions={
+      responsive:true, // enable resizing
+      maintainAspectRatio:false, //prevent locking aspect ratio
                 plugins: {
                   legend: {
                       display: false, // Hide legend

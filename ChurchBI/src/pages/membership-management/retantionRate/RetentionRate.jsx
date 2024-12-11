@@ -5,11 +5,6 @@ import {
   Card,
   Typography,
   Grid,
-  Avatar,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
 } from "@mui/material";
 import {
   Chart as ChartJS,
@@ -26,7 +21,6 @@ import DoughnutC from "../../../components/DoughnutC"; // Import your custom Dou
 // Import JSON data
 import ageData from "../../../data/ageDataRetention.json";
 import workStatusData from "../../../data/workStatusDataRetention.json";
-import discipleshipClasses from "../../../data/discipleshipClasses.json";
 import {
   fetchRetentionData,
   fetchJustVisiting,
@@ -312,7 +306,7 @@ function RetentionRate() {
 
       <Grid container spacing={2}>
         {/* Retention Rate Chart */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={12}>
           <Card
             sx={{
               padding: "1.5rem",
@@ -335,45 +329,9 @@ function RetentionRate() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
-          {/* Discipleship classes */}
-          <Card sx={{ padding: "1.5rem", backgroundColor: "#fff" }}>
-            <Typography variant="h6">Discipleship Classes</Typography>
-            <List>
-              {discipleshipClasses.map((item, index) => (
-                <ListItem key={index} sx={{ paddingLeft: 0, paddingRight: 0 }}>
-                  <ListItemAvatar>
-                    <Avatar src={item.avatar} alt={item.leaderName} />
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={
-                      <Typography variant="body1" fontWeight="bold">
-                        {item.className}
-                      </Typography>
-                    }
-                    secondary={
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="space-between"
-                      >
-                        <Typography variant="body2">
-                          {item.leaderName}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          {item.label}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Card>
-        </Grid>
 
         {/* Age Distribution Donut Chart and Work Status Donut Chart */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={12}>
           <Grid container spacing={2}>
             {/* Age Distribution */}
             <Grid item xs={6}>
@@ -398,7 +356,7 @@ function RetentionRate() {
               </Card>
             </Grid>
 
-            {/* Work Status */}
+            {/* Work Status incomplete */}
             <Grid item xs={6}>
               <Card
                 sx={{
