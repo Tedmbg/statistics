@@ -93,7 +93,9 @@ const authenticateAdmin = (req, res, next) => {
 app.get('/', (req, res) => {
   res.send('API is working!');
 });
+
 // Adding memeber 
+// Adding Member with changes to work with volunteers and ministries 
 app.post('/api/members/add', async (req, res) => {
     const {
         sir_name,
@@ -107,20 +109,20 @@ app.post('/api/members/add', async (req, res) => {
         occupation_status,
         married_status,
         is_visiting,
-        fellowship_ministries,
-        service_ministries,
         is_full_member,
         baptized,
         conversion_date,
         discipleship_class_id,
         completed_class,
         next_of_kin,
-        volunteering,
+        volunteering // Expected as an array of volunteering entries
     } = req.body;
 
     try {
         // Step 1: Get the next member_id
-        const nextMemberIdResult = await pool.query('SELECT COALESCE(MAX(member_id), 0) + 1 AS next_id FROM members');
+        const nextMemberIdResult = await pool.query(
+            'SELECT COALESCE(MAX(member_id), 0) + 1 AS next_id FROM members'
+        );
         const nextMemberId = nextMemberIdResult.rows[0].next_id;
 
         // Step 2: Insert member into the members table
@@ -155,8 +157,14 @@ app.post('/api/members/add', async (req, res) => {
             date_of_birth,
             married_status,
             occupation_status,
-            fellowship_ministries,
-            service_ministries,
+            volunteering
+                .filter(v => v.ministry_type === 'Fellowship')
+                .map(v => v.ministry_name)
+                .join(', '), // Concatenate fellowship ministry names
+            volunteering
+                .filter(v => v.ministry_type === 'Service')
+                .map(v => v.ministry_name)
+                .join(', '), // Concatenate service ministry names
             !!baptized, // Convert to boolean
             conversion_date,
             !!is_full_member, // Convert to boolean
@@ -172,7 +180,12 @@ app.post('/api/members/add', async (req, res) => {
         const memberId = memberResult.rows[0].member_id;
 
         // Step 3: Insert next of kin into the next_of_kin table
-        if (next_of_kin && next_of_kin.first_name && next_of_kin.last_name && next_of_kin.contact_info) {
+        if (
+            next_of_kin &&
+            next_of_kin.first_name &&
+            next_of_kin.last_name &&
+            next_of_kin.contact_info
+        ) {
             const nextOfKinQuery = `
                 INSERT INTO next_of_kin (member_id, first_name, last_name, contact_info)
                 VALUES ($1, $2, $3, $4);
@@ -188,19 +201,51 @@ app.post('/api/members/add', async (req, res) => {
             await pool.query(nextOfKinQuery, nextOfKinValues);
         }
 
-        // Step 4: Insert volunteering data into the volunteers table
-        if (volunteering && volunteering.role) {
-            // Get the next volunteer_id
-            const nextVolunteerIdResult = await pool.query('SELECT COALESCE(MAX(volunteer_id), 0) + 1 AS next_id FROM volunteers');
-            const nextVolunteerId = nextVolunteerIdResult.rows[0].next_id;
+        // Step 4: Insert volunteering data into the volunteers and member_ministries tables
+        if (Array.isArray(volunteering) && volunteering.length > 0) {
+            for (const volunteerEntry of volunteering) {
+                const { role, ministry_name, ministry_type } = volunteerEntry;
 
-            const volunteeringQuery = `
-                INSERT INTO volunteers (volunteer_id, member_id, role)
-                VALUES ($1, $2, $3);
-            `;
+                if (role && ministry_name && ministry_type) {
+                    const ministryQuery = `
+                        SELECT ministry_id FROM ministries
+                        WHERE ministry_name = $1 AND type = $2
+                        LIMIT 1;
+                    `;
+                    const ministryValues = [ministry_name, ministry_type];
+                    const ministryResult = await pool.query(ministryQuery, ministryValues);
 
-            const volunteeringValues = [nextVolunteerId, memberId, volunteering.role];
-            await pool.query(volunteeringQuery, volunteeringValues);
+                    if (ministryResult.rows.length > 0) {
+                        const ministryId = ministryResult.rows[0].ministry_id;
+
+                        // Insert into member_ministries table
+                        const memberMinistryQuery = `
+                            INSERT INTO member_ministries (member_id, ministry_id)
+                            VALUES ($1, $2);
+                        `;
+                        await pool.query(memberMinistryQuery, [memberId, ministryId]);
+
+                        // Insert into volunteers table
+                        const nextVolunteerIdResult = await pool.query(
+                            'SELECT COALESCE(MAX(volunteer_id), 0) + 1 AS next_id FROM volunteers'
+                        );
+                        const nextVolunteerId = nextVolunteerIdResult.rows[0].next_id;
+
+                        const volunteeringQuery = `
+                            INSERT INTO volunteers (volunteer_id, member_id, role, ministry_id)
+                            VALUES ($1, $2, $3, $4);
+                        `;
+
+                        const volunteeringValues = [
+                            nextVolunteerId,
+                            memberId,
+                            role,
+                            ministryId,
+                        ];
+                        await pool.query(volunteeringQuery, volunteeringValues);
+                    }
+                }
+            }
         }
 
         res.status(201).json({
@@ -212,6 +257,9 @@ app.post('/api/members/add', async (req, res) => {
         res.status(500).json({ error: 'Failed to add member' });
     }
 });
+
+
+
 
 // Get all members
 app.get('/api/members', async (req, res) => {
@@ -1140,6 +1188,7 @@ app.get('/api/members/work-status-dis', async (req, res) => {
 
 //service list 
 // Service ministries list with member filtering
+// Service ministries list with member filtering: using new member_minstries
 app.get('/api/service-ministries', async (req, res) => {
     const { year } = req.query; // Get the year from the query parameters
 
@@ -1150,16 +1199,17 @@ app.get('/api/service-ministries', async (req, res) => {
                 min.ministry_name,
                 min.leader_name AS instructor,
                 COUNT(
-                    CASE 
-                        WHEN m.is_visiting = FALSE 
-                             AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 
+                    CASE
+                        WHEN m.is_visiting = FALSE
+                             AND DATE_PART('year', AGE(m.date_of_birth)) >= 18
                              ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''}
                         THEN m.member_id
                     END
                 )::INTEGER AS total_members
             FROM
                 ministries min
-            LEFT JOIN members m ON min.ministry_id = m.assigned_ministry_id
+            LEFT JOIN member_ministries mm ON min.ministry_id = mm.ministry_id
+            LEFT JOIN members m ON mm.member_id = m.member_id
             WHERE
                 min.type = 'Service'
             GROUP BY
@@ -1183,6 +1233,7 @@ app.get('/api/service-ministries', async (req, res) => {
 
 // age distribution 
 // Age distribution for service ministries
+// Age Distribution for Service Ministries with change to use new member_minstries
 app.get('/api/service-ministries/age-distribution', async (req, res) => {
     const { year } = req.query; // Get the year from the query parameters
 
@@ -1200,8 +1251,9 @@ app.get('/api/service-ministries/age-distribution', async (req, res) => {
                 END AS age_range,
                 COUNT(m.member_id)::INTEGER AS total
             FROM
-                members m
-            JOIN ministries min ON m.assigned_ministry_id = min.ministry_id
+                ministries min
+            LEFT JOIN member_ministries mm ON min.ministry_id = mm.ministry_id
+            LEFT JOIN members m ON mm.member_id = m.member_id
             WHERE
                 min.type = 'Service' -- Only service ministries
                 AND m.is_visiting = FALSE -- Exclude visiting members
@@ -1226,9 +1278,9 @@ app.get('/api/service-ministries/age-distribution', async (req, res) => {
 });
 
 
-
 // work status service
 // Work status distribution for service ministries
+// Work Status Distribution for Service Ministries with change to use new member_minstries
 app.get('/api/service-ministries/work-status', async (req, res) => {
     const { year } = req.query; // Get the year from the query parameters
 
@@ -1240,8 +1292,9 @@ app.get('/api/service-ministries/work-status', async (req, res) => {
                 COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::INTEGER AS male_count,
                 COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::INTEGER AS female_count
             FROM
-                members m
-            JOIN ministries min ON m.assigned_ministry_id = min.ministry_id
+                ministries min
+            LEFT JOIN member_ministries mm ON min.ministry_id = mm.ministry_id
+            LEFT JOIN members m ON mm.member_id = m.member_id
             WHERE
                 min.type = 'Service' -- Only service ministries
                 AND m.is_visiting = FALSE -- Exclude visiting members
@@ -1265,6 +1318,7 @@ app.get('/api/service-ministries/work-status', async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
+
 
 
 // update the discipleship-classes end-date 
@@ -1419,6 +1473,80 @@ app.put('/api/discipleship-classes/:id/start-date', async (req, res) => {
         });
     } catch (err) {
         console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+// Volunteers API
+// Volunteers API with Year Filter and Exclude Visiting Members
+app.get('/api/volunteers', async (req, res) => {
+    const { year } = req.query; // Get the year from query parameters
+
+    try {
+        const query = `
+            SELECT
+                v.volunteer_id,
+                m.name AS member_name,
+                v.role,
+                min.ministry_name
+            FROM
+                volunteers v
+            JOIN members m ON v.member_id = m.member_id
+            JOIN member_ministries mm ON m.member_id = mm.member_id
+            JOIN ministries min ON mm.ministry_id = min.ministry_id
+            WHERE
+                m.is_visiting = FALSE -- Exclude visiting members
+                ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''} -- Filter by year if provided
+            ORDER BY
+                min.ministry_name, v.role;
+        `;
+
+        const result = await pool.query(query);
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: year || 'All Years', // Include the year or indicate "All Years"
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+
+// Total Count of Volunteers API
+// Total Count of Volunteers API with Year Filter and Exclude Visiting Members
+app.get('/api/volunteers/total-count', async (req, res) => {
+    const { year } = req.query; // Get the year from query parameters
+
+    try {
+        const query = `
+            SELECT
+                min.ministry_name,
+                COUNT(v.volunteer_id)::INTEGER AS total_volunteers
+            FROM
+                volunteers v
+            JOIN members m ON v.member_id = m.member_id
+            JOIN member_ministries mm ON m.member_id = mm.member_id
+            JOIN ministries min ON mm.ministry_id = min.ministry_id
+            WHERE
+                m.is_visiting = FALSE -- Exclude visiting members
+                ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''} -- Filter by year if provided
+            GROUP BY
+                min.ministry_name
+            ORDER BY
+                total_volunteers DESC;
+        `;
+
+        const result = await pool.query(query);
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: year || 'All Years', // Include the year or indicate "All Years"
+        });
+    } catch (err) {
+        console.error(err.message);
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
