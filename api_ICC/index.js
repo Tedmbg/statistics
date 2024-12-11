@@ -10,11 +10,10 @@ dotenv.config();
 // Initialize Express
 const app = express();
 
-
-
+// Configure CORS
 app.use(cors({
     origin: ['http://localhost:5173', 'https://statistics-production-032c.up.railway.app'], 
-    methods: 'GET,POST', 
+    methods: 'GET,POST,PUT,DELETE', 
 }));
 
 // Middleware to parse JSON
@@ -48,7 +47,91 @@ pool.connect((err, client, release) => {
 app.get('/', (req, res) => {
   res.send('API is working!');
 });
-// Adding memeber 
+
+// GET /api/members - Fetch all members with related next of kin and volunteering details
+app.get('/api/members', async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                m.member_id,
+                m.name,
+                m.contact_info,
+                m.date_of_birth,
+                m.married_status,
+                m.occupation_status,
+                m.fellowship_ministries,
+                m.service_ministries,
+                m.baptized,
+                m.conversion_date,
+                m.is_full_member,
+                m.is_visiting,
+                m.location,
+                m.county_of_origin,
+                m.gender,
+                m.discipleship_class_id,
+                m.completed_class,
+                m.membership_date,
+                nk.first_name AS next_of_kin_first_name,
+                nk.last_name AS next_of_kin_last_name,
+                nk.contact_info AS next_of_kin_contact_info,
+                v.volunteer_id,
+                v.role AS volunteer_role
+            FROM 
+                members m
+            LEFT JOIN 
+                next_of_kin nk ON m.member_id = nk.member_id
+            LEFT JOIN 
+                volunteers v ON m.member_id = v.member_id
+            ORDER BY 
+                m.member_id ASC;
+        `;
+        const result = await pool.query(query);
+
+        // Transform the data to group related information
+        const members = {};
+
+        result.rows.forEach(row => {
+            if (!members[row.member_id]) {
+                members[row.member_id] = {
+                    id: row.member_id,
+                    name: row.name,
+                    contactInfo: row.contact_info,
+                    dateOfBirth: row.date_of_birth,
+                    marriedStatus: row.married_status,
+                    occupationStatus: row.occupation_status,
+                    fellowshipMinistries: row.fellowship_ministries,
+                    serviceMinistries: row.service_ministries,
+                    baptized: row.baptized,
+                    conversionDate: row.conversion_date,
+                    isFullMember: row.is_full_member,
+                    isVisiting: row.is_visiting,
+                    location: row.location,
+                    countyOfOrigin: row.county_of_origin,
+                    gender: row.gender,
+                    discipleshipClassId: row.discipleship_class_id,
+                    completedClass: row.completed_class,
+                    membershipDate: row.membership_date,
+                    nextOfKin: row.next_of_kin_first_name ? {
+                        firstName: row.next_of_kin_first_name,
+                        lastName: row.next_of_kin_last_name,
+                        contactInfo: row.next_of_kin_contact_info,
+                    } : null,
+                    volunteering: row.volunteer_id ? {
+                        volunteerId: row.volunteer_id,
+                        role: row.volunteer_role,
+                    } : null,
+                };
+            }
+        });
+
+        res.json(Object.values(members));
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error fetching members' });
+    }
+});
+
+// POST /api/members/add - Add a new member
 app.post('/api/members/add', async (req, res) => {
     const {
         sir_name,
@@ -771,9 +854,170 @@ app.get('/api/fellowship-members-per-month', async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
+app.put('/api/members/:id', async (req, res) => {
+    const memberId = parseInt(req.params.id, 10);
+    const {
+        sir_name,
+        middle_name,
+        last_name,
+        date_of_birth,
+        contact_info,
+        gender,
+        location,
+        county_of_origin,
+        occupation_status,
+        married_status,
+        is_visiting,
+        fellowship_ministries,
+        service_ministries,
+        is_full_member,
+        baptized,
+        conversion_date,
+        discipleship_class_id,
+        completed_class,
+        next_of_kin,
+        volunteering,
+    } = req.body;
+
+    try {
+        // Step 1: Check if the member exists
+        const memberCheck = await pool.query('SELECT * FROM members WHERE member_id = $1', [memberId]);
+        if (memberCheck.rowCount === 0) {
+            return res.status(404).json({ error: 'Member not found' });
+        }
+
+        // Step 2: Update the members table
+        const updateMemberQuery = `
+            UPDATE members
+            SET 
+                name = $1,
+                contact_info = $2,
+                date_of_birth = $3,
+                married_status = $4,
+                occupation_status = $5,
+                fellowship_ministries = $6,
+                service_ministries = $7,
+                baptized = $8,
+                conversion_date = $9,
+                is_full_member = $10,
+                is_visiting = $11,
+                location = $12,
+                county_of_origin = $13,
+                gender = $14,
+                discipleship_class_id = $15,
+                completed_class = $16,
+                membership_date = NOW()
+            WHERE member_id = $17
+            RETURNING *;
+        `;
+
+        const updateMemberValues = [
+            `${sir_name} ${middle_name} ${last_name}`.trim(),
+            contact_info,
+            date_of_birth,
+            married_status,
+            occupation_status,
+            fellowship_ministries,
+            service_ministries,
+            !!baptized, // Convert to boolean
+            conversion_date,
+            !!is_full_member, // Convert to boolean
+            !!is_visiting, // Convert to boolean
+            location,
+            county_of_origin,
+            gender,
+            discipleship_class_id,
+            completed_class === true, // Ensure boolean value
+            memberId,
+        ];
+
+        const updatedMemberResult = await pool.query(updateMemberQuery, updateMemberValues);
+        const updatedMember = updatedMemberResult.rows[0];
+
+        // Step 3: Update the next_of_kin table (if provided)
+        if (next_of_kin && next_of_kin.first_name && next_of_kin.last_name && next_of_kin.contact_info) {
+            // Check if next_of_kin exists for this member
+            const nextOfKinCheck = await pool.query('SELECT * FROM next_of_kin WHERE member_id = $1', [memberId]);
+
+            if (nextOfKinCheck.rowCount > 0) {
+                // Update existing next_of_kin
+                const updateNextOfKinQuery = `
+                    UPDATE next_of_kin
+                    SET 
+                        first_name = $1,
+                        last_name = $2,
+                        contact_info = $3
+                    WHERE member_id = $4
+                    RETURNING *;
+                `;
+                const updateNextOfKinValues = [
+                    next_of_kin.first_name,
+                    next_of_kin.last_name,
+                    next_of_kin.contact_info,
+                    memberId,
+                ];
+
+                await pool.query(updateNextOfKinQuery, updateNextOfKinValues);
+            } else {
+                // Insert new next_of_kin
+                const insertNextOfKinQuery = `
+                    INSERT INTO next_of_kin (member_id, first_name, last_name, contact_info)
+                    VALUES ($1, $2, $3, $4);
+                `;
+                const insertNextOfKinValues = [
+                    memberId,
+                    next_of_kin.first_name,
+                    next_of_kin.last_name,
+                    next_of_kin.contact_info,
+                ];
+
+                await pool.query(insertNextOfKinQuery, insertNextOfKinValues);
+            }
+        }
+
+        // Step 4: Update the volunteers table (if provided)
+        if (volunteering && volunteering.role) {
+            // Check if volunteering record exists for this member
+            const volunteerCheck = await pool.query('SELECT * FROM volunteers WHERE member_id = $1', [memberId]);
+
+            if (volunteerCheck.rowCount > 0) {
+                // Update existing volunteer
+                const updateVolunteerQuery = `
+                    UPDATE volunteers
+                    SET role = $1
+                    WHERE member_id = $2
+                    RETURNING *;
+                `;
+                const updateVolunteerValues = [
+                    volunteering.role,
+                    memberId,
+                ];
+
+                await pool.query(updateVolunteerQuery, updateVolunteerValues);
+            } else {
+                // Insert new volunteer
+                const nextVolunteerIdResult = await pool.query('SELECT COALESCE(MAX(volunteer_id), 0) + 1 AS next_id FROM volunteers');
+                const nextVolunteerId = nextVolunteerIdResult.rows[0].next_id;
+
+                const insertVolunteerQuery = `
+                    INSERT INTO volunteers (volunteer_id, member_id, role)
+                    VALUES ($1, $2, $3);
+                `;
+                const insertVolunteerValues = [
+                    nextVolunteerId,
+                    memberId,
+                    volunteering.role,
+                ];
+
+                await pool.query(insertVolunteerQuery, insertVolunteerValues);
+            }
+        }
+
 
 
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+
