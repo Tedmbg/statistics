@@ -1246,6 +1246,17 @@ app.put('/api/members/:id', async (req, res) => {
                 await pool.query(insertVolunteerQuery, insertVolunteerValues);
             }
         }
+            // Respond with the updated member details
+            res.status(200).json({
+                message: 'Member updated successfully',
+                member: updatedMember,
+            });
+    
+        } catch (error) {
+            console.error('Error updating member:', error.message);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    });
 
         app.get('/api/members/:id', async (req, res) => {
             const memberId = req.params.id;
@@ -1751,11 +1762,10 @@ app.post('/api/users/create', authenticateAdmin, async (req, res) => {
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
+
 });
 
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
-
-
