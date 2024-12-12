@@ -49,11 +49,12 @@ function RetentionRate() {
   const [averageRetentionRate, setAverageRetentionRate] = useState(null);
   const [malePercentage, setMalePercentage] = useState(null);
   const [femalePercentage, setFemalePercentage] = useState(null);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear()); // Default to current year
 
   useEffect(() => {
     const getData = async () => {
       try {
-        const retentionData = await fetchRetentionData(); // Fetch dynamic data
+        const retentionData = await fetchRetentionData(selectedYear); // Fetch dynamic data
         setRetentionBarData(retentionData);
 
         const visitorData = await fetchJustVisiting(); // fetch just visiting data
@@ -75,10 +76,18 @@ function RetentionRate() {
     };
 
     getData();
-  }, []);
+  }, [selectedYear]);
 
   // test if data is going to be sent.
   console.log("Retention Bar Data:", retentionBarData);
+
+  const handleDateChange = (newDate) => {
+    // Implement data fetching based on the newDate
+    // For example:
+    // const updatedData = fetchDataForYear(newDate);
+    // setBarChartData(updatedData);
+    setSelectedYear(newDate);
+  };
 
   const retentionBarOptions = {
     responsive: true,
@@ -92,11 +101,9 @@ function RetentionRate() {
       y: {
         stacked: true,
         beginAtZero: true,
-        max: 100, // Maximum value for percentage
+        max: 100,
         ticks: {
-          callback: function (value) {
-            return value + "%";
-          },
+          callback: (value) => `${value}%`,
         },
         title: { display: true, text: "Retention Rate (%)" },
       },
@@ -306,14 +313,8 @@ function RetentionRate() {
 
       <Grid container spacing={2}>
         {/* Retention Rate Chart */}
-        <Grid item xs={12} md={12}>
-          <Card
-            sx={{
-              padding: "1.5rem",
-              backgroundColor: "#fff",
-              boxShadow: "none",
-            }}
-          >
+        <Grid item xs={12}>
+          <Card sx={{ padding: "1.5rem", backgroundColor: "#fff", boxShadow: "none" }}>
             {loading ? (
               <Typography>Loading...</Typography>
             ) : error ? (
@@ -323,11 +324,13 @@ function RetentionRate() {
                 data={retentionBarData}
                 options={retentionBarOptions}
                 title="Retention Rate"
+                onDateChange={handleDateChange} // Pass year change handler
                 height={"41.9895rem"} // Adjust height if needed
               />
             )}
           </Card>
         </Grid>
+
 
 
         {/* Age Distribution Donut Chart and Work Status Donut Chart */}

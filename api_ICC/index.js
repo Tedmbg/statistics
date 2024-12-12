@@ -66,26 +66,27 @@ cron.schedule('0 0 * * *', async () => {
     }
 });
 
-const authenticateAdmin = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+const authenticateAdmin = async (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
 
     if (!token) {
-        return res.status(401).json({ status: 'error', message: 'Unauthorized: No token provided' });
+        return res.status(401).json({ status: 'error', message: 'Unauthorized. Token is missing.' });
     }
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ status: 'error', message: 'Forbidden: Invalid token' });
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+
+        // Check if the user has an admin role
+        if (decoded.role !== 'Admin') {
+            return res.status(403).json({ status: 'error', message: 'Access denied. Admins only.' });
         }
 
-        if (user.role !== 'Admin') {
-            return res.status(403).json({ status: 'error', message: 'Access denied: Admins only' });
-        }
-
-        req.user = user; // Attach user info to the request
+        req.user = decoded; // Attach decoded user information to the request
         next();
-    });
+    } catch (err) {
+        console.error(err);
+        return res.status(401).json({ status: 'error', message: 'Unauthorized. Invalid token.' });
+    }
 };
 
 // Sample route
@@ -93,90 +94,8 @@ app.get('/', (req, res) => {
   res.send('API is working!');
 });
 
-// GET /api/members - Fetch all members with related next of kin and volunteering details
-app.get('/api/members', async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                m.member_id,
-                m.name,
-                m.contact_info,
-                m.date_of_birth,
-                m.married_status,
-                m.occupation_status,
-                m.fellowship_ministries,
-                m.service_ministries,
-                m.baptized,
-                m.conversion_date,
-                m.is_full_member,
-                m.is_visiting,
-                m.location,
-                m.county_of_origin,
-                m.gender,
-                m.discipleship_class_id,
-                m.completed_class,
-                m.membership_date,
-                nk.first_name AS next_of_kin_first_name,
-                nk.last_name AS next_of_kin_last_name,
-                nk.contact_info AS next_of_kin_contact_info,
-                v.volunteer_id,
-                v.role AS volunteer_role
-            FROM 
-                members m
-            LEFT JOIN 
-                next_of_kin nk ON m.member_id = nk.member_id
-            LEFT JOIN 
-                volunteers v ON m.member_id = v.member_id
-            ORDER BY 
-                m.member_id ASC;
-        `;
-        const result = await pool.query(query);
-
-        // Transform the data to group related information
-        const members = {};
-
-        result.rows.forEach(row => {
-            if (!members[row.member_id]) {
-                members[row.member_id] = {
-                    id: row.member_id,
-                    name: row.name,
-                    contactInfo: row.contact_info,
-                    dateOfBirth: row.date_of_birth,
-                    marriedStatus: row.married_status,
-                    occupationStatus: row.occupation_status,
-                    fellowshipMinistries: row.fellowship_ministries,
-                    serviceMinistries: row.service_ministries,
-                    baptized: row.baptized,
-                    conversionDate: row.conversion_date,
-                    isFullMember: row.is_full_member,
-                    isVisiting: row.is_visiting,
-                    location: row.location,
-                    countyOfOrigin: row.county_of_origin,
-                    gender: row.gender,
-                    discipleshipClassId: row.discipleship_class_id,
-                    completedClass: row.completed_class,
-                    membershipDate: row.membership_date,
-                    nextOfKin: row.next_of_kin_first_name ? {
-                        firstName: row.next_of_kin_first_name,
-                        lastName: row.next_of_kin_last_name,
-                        contactInfo: row.next_of_kin_contact_info,
-                    } : null,
-                    volunteering: row.volunteer_id ? {
-                        volunteerId: row.volunteer_id,
-                        role: row.volunteer_role,
-                    } : null,
-                };
-            }
-        });
-
-        res.json(Object.values(members));
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error fetching members' });
-    }
-});
-
-// POST /api/members/add - Add a new member
+// Adding memeber 
+// Adding Member with changes to work with volunteers and ministries 
 app.post('/api/members/add', async (req, res) => {
     const {
         sir_name,
@@ -190,20 +109,20 @@ app.post('/api/members/add', async (req, res) => {
         occupation_status,
         married_status,
         is_visiting,
-        fellowship_ministries,
-        service_ministries,
         is_full_member,
         baptized,
         conversion_date,
         discipleship_class_id,
         completed_class,
         next_of_kin,
-        volunteering,
+        volunteering // Expected as an array of volunteering entries
     } = req.body;
 
     try {
         // Step 1: Get the next member_id
-        const nextMemberIdResult = await pool.query('SELECT COALESCE(MAX(member_id), 0) + 1 AS next_id FROM members');
+        const nextMemberIdResult = await pool.query(
+            'SELECT COALESCE(MAX(member_id), 0) + 1 AS next_id FROM members'
+        );
         const nextMemberId = nextMemberIdResult.rows[0].next_id;
 
         // Step 2: Insert member into the members table
@@ -238,8 +157,14 @@ app.post('/api/members/add', async (req, res) => {
             date_of_birth,
             married_status,
             occupation_status,
-            fellowship_ministries,
-            service_ministries,
+            volunteering
+                .filter(v => v.ministry_type === 'Fellowship')
+                .map(v => v.ministry_name)
+                .join(', '), // Concatenate fellowship ministry names
+            volunteering
+                .filter(v => v.ministry_type === 'Service')
+                .map(v => v.ministry_name)
+                .join(', '), // Concatenate service ministry names
             !!baptized, // Convert to boolean
             conversion_date,
             !!is_full_member, // Convert to boolean
@@ -255,7 +180,12 @@ app.post('/api/members/add', async (req, res) => {
         const memberId = memberResult.rows[0].member_id;
 
         // Step 3: Insert next of kin into the next_of_kin table
-        if (next_of_kin && next_of_kin.first_name && next_of_kin.last_name && next_of_kin.contact_info) {
+        if (
+            next_of_kin &&
+            next_of_kin.first_name &&
+            next_of_kin.last_name &&
+            next_of_kin.contact_info
+        ) {
             const nextOfKinQuery = `
                 INSERT INTO next_of_kin (member_id, first_name, last_name, contact_info)
                 VALUES ($1, $2, $3, $4);
@@ -271,19 +201,51 @@ app.post('/api/members/add', async (req, res) => {
             await pool.query(nextOfKinQuery, nextOfKinValues);
         }
 
-        // Step 4: Insert volunteering data into the volunteers table
-        if (volunteering && volunteering.role) {
-            // Get the next volunteer_id
-            const nextVolunteerIdResult = await pool.query('SELECT COALESCE(MAX(volunteer_id), 0) + 1 AS next_id FROM volunteers');
-            const nextVolunteerId = nextVolunteerIdResult.rows[0].next_id;
+        // Step 4: Insert volunteering data into the volunteers and member_ministries tables
+        if (Array.isArray(volunteering) && volunteering.length > 0) {
+            for (const volunteerEntry of volunteering) {
+                const { role, ministry_name, ministry_type } = volunteerEntry;
 
-            const volunteeringQuery = `
-                INSERT INTO volunteers (volunteer_id, member_id, role)
-                VALUES ($1, $2, $3);
-            `;
+                if (role && ministry_name && ministry_type) {
+                    const ministryQuery = `
+                        SELECT ministry_id FROM ministries
+                        WHERE ministry_name = $1 AND type = $2
+                        LIMIT 1;
+                    `;
+                    const ministryValues = [ministry_name, ministry_type];
+                    const ministryResult = await pool.query(ministryQuery, ministryValues);
 
-            const volunteeringValues = [nextVolunteerId, memberId, volunteering.role];
-            await pool.query(volunteeringQuery, volunteeringValues);
+                    if (ministryResult.rows.length > 0) {
+                        const ministryId = ministryResult.rows[0].ministry_id;
+
+                        // Insert into member_ministries table
+                        const memberMinistryQuery = `
+                            INSERT INTO member_ministries (member_id, ministry_id)
+                            VALUES ($1, $2);
+                        `;
+                        await pool.query(memberMinistryQuery, [memberId, ministryId]);
+
+                        // Insert into volunteers table
+                        const nextVolunteerIdResult = await pool.query(
+                            'SELECT COALESCE(MAX(volunteer_id), 0) + 1 AS next_id FROM volunteers'
+                        );
+                        const nextVolunteerId = nextVolunteerIdResult.rows[0].next_id;
+
+                        const volunteeringQuery = `
+                            INSERT INTO volunteers (volunteer_id, member_id, role, ministry_id)
+                            VALUES ($1, $2, $3, $4);
+                        `;
+
+                        const volunteeringValues = [
+                            nextVolunteerId,
+                            memberId,
+                            role,
+                            ministryId,
+                        ];
+                        await pool.query(volunteeringQuery, volunteeringValues);
+                    }
+                }
+            }
         }
 
         res.status(201).json({
@@ -970,11 +932,12 @@ app.get('/api/generate-class-name', async (req, res) => {
   
 
 // Add Discipleship Class API
+// Add Discipleship Class API with class days  changed  to INEGER
 app.post('/api/discipleship-classes_add', async (req, res) => {
-    const { class_name, instructor, creation_date, end_date, description, type, class_time, class_days } = req.body;
+    const { class_name, instructor, creation_date, end_date, description, type, class_time, class_day } = req.body;
 
     // Validate request body
-    if (!class_name || !instructor || !creation_date || !end_date || !type || !class_time || !class_days) {
+    if (!class_name || !instructor || !creation_date || !end_date || !type || !class_time || class_day == null) {
         return res.status(400).json({ status: 'error', message: 'Missing required fields' });
     }
 
@@ -983,9 +946,9 @@ app.post('/api/discipleship-classes_add', async (req, res) => {
         return res.status(400).json({ status: 'error', message: "Type must be either 'Virtual' or 'Physical'" });
     }
 
-    // Validate 'class_days' as an array
-    if (!Array.isArray(class_days) || class_days.length === 0) {
-        return res.status(400).json({ status: 'error', message: 'Class days must be a non-empty array' });
+    // Validate 'class_day' as a number between 1 and 7
+    if (!Number.isInteger(class_day) || class_day < 1 || class_day > 7) {
+        return res.status(400).json({ status: 'error', message: 'Class day must be an integer between 1 (Monday) and 7 (Sunday)' });
     }
 
     try {
@@ -995,10 +958,10 @@ app.post('/api/discipleship-classes_add', async (req, res) => {
 
         // Insert the new class with status = 'ongoing'
         const result = await pool.query(
-            `INSERT INTO discipleship_classes (class_id, class_name, instructor, start_date, end_date, description, type, class_time, class_days, status)
+            `INSERT INTO discipleship_classes (class_id, class_name, instructor, start_date, end_date, description, type, class_time, class_day, status)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
              RETURNING *;`,
-            [nextClassId, class_name, instructor, creation_date, end_date, description || null, type, class_time, class_days, 'ongoing']
+            [nextClassId, class_name, instructor, creation_date, end_date, description || null, type, class_time, class_day, 'ongoing']
         );
 
         res.status(201).json({
@@ -1011,6 +974,7 @@ app.post('/api/discipleship-classes_add', async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
+
 
 //Fetching Absentees(still being worked on)
 app.get('/api/absentees-list', async (req, res) => {
@@ -1461,6 +1425,7 @@ app.get('/api/members/work-status-dis', async (req, res) => {
 
 //service list 
 // Service ministries list with member filtering
+// Service ministries list with member filtering: using new member_minstries
 app.get('/api/service-ministries', async (req, res) => {
     const { year } = req.query; // Get the year from the query parameters
 
@@ -1471,16 +1436,17 @@ app.get('/api/service-ministries', async (req, res) => {
                 min.ministry_name,
                 min.leader_name AS instructor,
                 COUNT(
-                    CASE 
-                        WHEN m.is_visiting = FALSE 
-                             AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 
+                    CASE
+                        WHEN m.is_visiting = FALSE
+                             AND DATE_PART('year', AGE(m.date_of_birth)) >= 18
                              ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''}
                         THEN m.member_id
                     END
                 )::INTEGER AS total_members
             FROM
                 ministries min
-            LEFT JOIN members m ON min.ministry_id = m.assigned_ministry_id
+            LEFT JOIN member_ministries mm ON min.ministry_id = mm.ministry_id
+            LEFT JOIN members m ON mm.member_id = m.member_id
             WHERE
                 min.type = 'Service'
             GROUP BY
@@ -1504,6 +1470,7 @@ app.get('/api/service-ministries', async (req, res) => {
 
 // age distribution 
 // Age distribution for service ministries
+// Age Distribution for Service Ministries with change to use new member_minstries
 app.get('/api/service-ministries/age-distribution', async (req, res) => {
     const { year } = req.query; // Get the year from the query parameters
 
@@ -1521,8 +1488,9 @@ app.get('/api/service-ministries/age-distribution', async (req, res) => {
                 END AS age_range,
                 COUNT(m.member_id)::INTEGER AS total
             FROM
-                members m
-            JOIN ministries min ON m.assigned_ministry_id = min.ministry_id
+                ministries min
+            LEFT JOIN member_ministries mm ON min.ministry_id = mm.ministry_id
+            LEFT JOIN members m ON mm.member_id = m.member_id
             WHERE
                 min.type = 'Service' -- Only service ministries
                 AND m.is_visiting = FALSE -- Exclude visiting members
@@ -1547,9 +1515,9 @@ app.get('/api/service-ministries/age-distribution', async (req, res) => {
 });
 
 
-
 // work status service
 // Work status distribution for service ministries
+// Work Status Distribution for Service Ministries with change to use new member_minstries
 app.get('/api/service-ministries/work-status', async (req, res) => {
     const { year } = req.query; // Get the year from the query parameters
 
@@ -1561,8 +1529,9 @@ app.get('/api/service-ministries/work-status', async (req, res) => {
                 COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::INTEGER AS male_count,
                 COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::INTEGER AS female_count
             FROM
-                members m
-            JOIN ministries min ON m.assigned_ministry_id = min.ministry_id
+                ministries min
+            LEFT JOIN member_ministries mm ON min.ministry_id = mm.ministry_id
+            LEFT JOIN members m ON mm.member_id = m.member_id
             WHERE
                 min.type = 'Service' -- Only service ministries
                 AND m.is_visiting = FALSE -- Exclude visiting members
@@ -1586,6 +1555,7 @@ app.get('/api/service-ministries/work-status', async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
+
 
 
 // update the discipleship-classes end-date 
@@ -1744,8 +1714,142 @@ app.put('/api/discipleship-classes/:id/start-date', async (req, res) => {
     }
 });
 
+// Volunteers API
+// Volunteers API with Year Filter and Exclude Visiting Members
+app.get('/api/volunteers', async (req, res) => {
+    const { year } = req.query; // Get the year from query parameters
 
-// Api for admin to create  login 
+    try {
+        const query = `
+            SELECT
+                v.volunteer_id,
+                m.name AS member_name,
+                v.role,
+                min.ministry_name
+            FROM
+                volunteers v
+            JOIN members m ON v.member_id = m.member_id
+            JOIN member_ministries mm ON m.member_id = mm.member_id
+            JOIN ministries min ON mm.ministry_id = min.ministry_id
+            WHERE
+                m.is_visiting = FALSE -- Exclude visiting members
+                ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''} -- Filter by year if provided
+            ORDER BY
+                min.ministry_name, v.role;
+        `;
+
+        const result = await pool.query(query);
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: year || 'All Years', // Include the year or indicate "All Years"
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+
+// Total Count of Volunteers API
+// Total Count of Volunteers API with Year Filter and Exclude Visiting Members
+app.get('/api/volunteers/total-count', async (req, res) => {
+    const { year } = req.query; // Get the year from query parameters
+
+    try {
+        const query = `
+            SELECT
+                min.ministry_name,
+                COUNT(v.volunteer_id)::INTEGER AS total_volunteers
+            FROM
+                volunteers v
+            JOIN members m ON v.member_id = m.member_id
+            JOIN member_ministries mm ON m.member_id = mm.member_id
+            JOIN ministries min ON mm.ministry_id = min.ministry_id
+            WHERE
+                m.is_visiting = FALSE -- Exclude visiting members
+                ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''} -- Filter by year if provided
+            GROUP BY
+                min.ministry_name
+            ORDER BY
+                total_volunteers DESC;
+        `;
+
+        const result = await pool.query(query);
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: year || 'All Years', // Include the year or indicate "All Years"
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+// Login API with Role Validation
+app.post('/api/users/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+        return res.status(400).json({ status: 'error', message: 'Email and password are required' });
+    }
+
+    try {
+        // Fetch user by contact_details (email)
+        const userQuery = `
+            SELECT user_id, contact_details AS email, password, role
+            FROM users
+            WHERE contact_details = $1
+        `;
+        const userResult = await pool.query(userQuery, [email]);
+
+        if (userResult.rows.length === 0) {
+            return res.status(401).json({ status: 'error', message: 'Invalid email or password' });
+        }
+
+        const user = userResult.rows[0];
+
+        // Check if the user has a valid role
+        const allowedRoles = ['Admin', 'Pastor', 'Leader'];
+        if (!allowedRoles.includes(user.role)) {
+            return res.status(403).json({ status: 'error', message: 'Access denied. Invalid role.' });
+        }
+
+        // Compare passwords
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ status: 'error', message: 'Invalid email or password' });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { userId: user.user_id, email: user.email, role: user.role },
+            JWT_SECRET,
+            { expiresIn: JWT_EXPIRES_IN }
+        );
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Login successful',
+            data: {
+                user_id: user.user_id,
+                email: user.email,
+                role: user.role,
+                token
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+
+// Create User API Restricted to Admins
 app.post('/api/users/create', authenticateAdmin, async (req, res) => {
     const { userfname, password, role, contact_details, phone_no } = req.body;
 
@@ -1787,12 +1891,12 @@ app.post('/api/users/create', authenticateAdmin, async (req, res) => {
             message: 'User account created successfully',
             data: {
                 user_id: result.rows[0].user_id,
-                userfname: result.rows[0].userfname,
+                username: result.rows[0].username,
                 role: result.rows[0].role,
                 contact_details: result.rows[0].contact_details,
                 phone_no: result.rows[0].phone_no,
                 date_created: result.rows[0].date_created,
-                token // Return the token
+                token
             }
         });
     } catch (err) {
@@ -1801,6 +1905,151 @@ app.post('/api/users/create', authenticateAdmin, async (req, res) => {
     }
 
 });
+
+
+
+// Create User API (Without Authentication for Testing) For Backend testing only **** DO NOT USE****, USE ABOVE
+app.post('/api/users/create/test', async (req, res) => {
+    const { userfname, password, role, contact_details, phone_no } = req.body;
+
+    // Validate input
+    if (!userfname || !password || !role || !contact_details || !phone_no) {
+        return res.status(400).json({ status: 'error', message: 'All fields are required' });
+    }
+
+    // Validate role
+    const allowedRoles = ['Admin', 'Pastor', 'Leader'];
+    if (!allowedRoles.includes(role)) {
+        return res.status(403).json({ status: 'error', message: 'Invalid role specified' });
+    }
+
+    try {
+        // Fetch the current maximum user_id
+        const maxIdResult = await pool.query('SELECT MAX(user_id) AS max_id FROM users');
+        const nextUserId = (maxIdResult.rows[0].max_id || 0) + 1;
+
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Insert the new user into the database
+        const result = await pool.query(`
+            INSERT INTO users (user_id, username, password, role, contact_details, phone_no, date_created)
+            VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+            RETURNING *;
+        `, [nextUserId, userfname, hashedPassword, role, contact_details, phone_no]);
+
+        res.status(201).json({
+            status: 'success',
+            message: 'User account created successfully',
+            data: {
+                user_id: result.rows[0].user_id,
+                username: result.rows[0].username,
+                role: result.rows[0].role,
+                contact_details: result.rows[0].contact_details,
+                phone_no: result.rows[0].phone_no,
+                date_created: result.rows[0].date_created
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+app.get('/api/members/:id', async (req, res) => {
+    const memberId = req.params.id;
+    
+    try {
+      // Fetch member data
+      const memberQuery = 'SELECT * FROM members WHERE member_id = $1';
+      const memberResult = await pool.query(memberQuery, [memberId]);
+  
+      if (memberResult.rowCount === 0) {
+        return res.status(404).json({ error: 'Member not found' });
+      }
+  
+      const member = memberResult.rows[0];
+  
+      // Fetch next of kin data from the next_of_kin table
+      const nextOfKinQuery = 'SELECT * FROM next_of_kin WHERE member_id = $1';
+      const nextOfKinResult = await pool.query(nextOfKinQuery, [memberId]);
+  
+      const nextOfKin = nextOfKinResult.rows[0] || {}; // Use the first result or an empty object if none found
+  
+      // Combine member and next of kin data
+      const responseData = {
+        ...member,
+        nextOfKinFirstName: nextOfKin.first_name || '',
+        nextOfKinLastName: nextOfKin.last_name || '',
+        nextOfKinContactInfo: nextOfKin.contact_info || '',
+      };
+  
+      res.json(responseData); // Send the combined data back to the frontend
+    } catch (error) {
+      console.error('Error fetching member data:', error.message);
+      res.status(500).json({ error: 'Error fetching member details' });
+    }
+  });
+
+
+// Token Validation API
+app.post('/api/validate-token', (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1]; // Extract token from Authorization header
+
+    if (!token) {
+        return res.status(401).json({ status: 'error', message: 'Token is missing' });
+    }
+
+    try {
+        // Verify the token
+        const decoded = jwt.verify(token, JWT_SECRET);
+
+        // Respond with the decoded token data
+        res.status(200).json({
+            status: 'success',
+            message: 'Token is valid',
+            data: {
+                userId: decoded.userId,
+                username: decoded.username,
+                role: decoded.role,
+                exp: decoded.exp
+            }
+        });
+    } catch (err) {
+        console.error('Token validation error:', err.message);
+
+        // Handle invalid or expired tokens
+        res.status(401).json({ status: 'error', message: 'Invalid or expired token' });
+    }
+});
+
+
+// Role-Based Access Control API
+app.get('/api/users/role', (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1]; // Extract token
+
+    if (!token) {
+        return res.status(401).json({ status: 'error', message: 'Token is missing' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET); // Verify and decode token
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                userId: decoded.userId,
+                username: decoded.username,
+                role: decoded.role
+            }
+        });
+    } catch (err) {
+        console.error('Role-based access control error:', err.message);
+        res.status(401).json({ status: 'error', message: 'Invalid or expired token' });
+    }
+});
+
 
 // Start the server
 app.listen(PORT, () => {

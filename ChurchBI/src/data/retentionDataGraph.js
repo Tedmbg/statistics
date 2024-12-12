@@ -3,11 +3,12 @@ import axios from "axios";
 import moment from "moment"; // For date formatting
 
 // Existing function to fetch retention data for the chart
-const fetchRetentionData = async () => {
+const fetchRetentionData = async (year = new Date().getFullYear()) => {
   try {
-    const response = await axios.get(
-      "https://statistics-production-032c.up.railway.app/api/retention-rate"
-    );
+    // Build the API URL with the year parameter
+    const apiUrl = `https://statistics-production-032c.up.railway.app/api/retention-rate?year=${year}`;
+
+    const response = await axios.get(apiUrl);
 
     const apiData = response.data.data; // Access the 'data' array
 
