@@ -1,26 +1,31 @@
+// src/layouts/RootLayout.jsx
+import { useContext, useState } from "react";
+import { AuthContext } from "../context/AuthContext";
 import { Outlet } from "react-router-dom";
+// Remove ChevronRightIcon and ChevronLeftIcon imports
 import SideBar from "../pages/global/SideBar";
 import "./root-layout.css";
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import { useState } from "react";
-
 
 export default function RootLayout() {
-  const [toggleSidebar, setToggleSidebar] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
+  const { isLoggedIn, logout } = useContext(AuthContext); // Ensure 'logout' is destructured
 
-  function handleSidebarToggle() {
-    setToggleSidebar(prev => !prev);
-  }
+  const handleSidebarToggle = () => {
+    setCollapsed((prev) => !prev);
+  };
 
   return (
-    <div className={`root-layout ${toggleSidebar ? "" : "sidebar-hidden"}`}>
-      <div className={`sidebar-content ${toggleSidebar ? "visibleSidebar" : "hiddenSidebar"}`}>
-        <button className="toggle-siderbar-btn" onClick={handleSidebarToggle}>
-         {toggleSidebar?<ChevronLeftIcon/>:<ChevronRightIcon />}
-        </button>
-        <SideBar isvisible={toggleSidebar}/>
-      </div>
+    <div className="root-layout">
+      {isLoggedIn && (
+        <div className="side-bar">
+          {/* Remove the toggle button */}
+          <SideBar
+            collapsed={collapsed}
+            onToggle={handleSidebarToggle} // Pass the toggle function
+            onLogout={logout} // Pass the logout function
+          />
+        </div>
+      )}
       <main className="main-content">
         <Outlet />
       </main>
