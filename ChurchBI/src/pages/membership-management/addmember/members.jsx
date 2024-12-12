@@ -38,14 +38,16 @@ export default function MemberManagement() {
       console.log("API Response:", response.data);
       // Process members to split the name into firstName, middleName, lastName
       const processedMembers = response.data.map(member => {
-        const nameParts = member.name.split(' ')
+        const nameParts = member.name.split(' ');
         return {
-          ...member,
+          id: member.member_id, // Ensure correct mapping of the ID
           firstName: nameParts[0] || '',
           middleName: nameParts[1] || '',
           lastName: nameParts.slice(2).join(' ') || '',
-        }
-      })
+          ...member,
+        };
+      });
+  
       setMembers(processedMembers);
     } catch (error) {
       console.error('Error fetching members:', error);
@@ -78,44 +80,60 @@ export default function MemberManagement() {
 
 // MemberManagement.js
 
-const handleEditMember = (member) => {
-  // Split the full name into firstName, middleName, and lastName
-  const nameParts = member.name ? member.name.split(' ') : [];
+const handleEditMember = async (memberId) => {
+  console.log('Member ID:', memberId); // Correct usage
+  if (!memberId) {
+    console.error('Member ID is undefined or null.');
+    return;
+  }
 
-  const firstName = nameParts[0] || '';
-  const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';  // Everything between first and last name
-  const lastName = nameParts[nameParts.length - 1] || '';
+  try {
+    // Fetch member data from the API
+    const response = await axios.get(`https://statistics-production-032c.up.railway.app/api/members/${memberId}`);
+    const member = response.data;
 
-  const mappedData = {
-    firstName,  // Set firstName from nameParts
-    middleName,  // Set middleName from nameParts
-    lastName,  // Set lastName from nameParts
-    dob: member.date_of_birth || "",
-    contactInfo: member.contact_info || "",
-    gender: member.gender || "",
-    location: member.location || "",
-    countyOfOrigin: member.county_of_origin || "",
-    occupationStatus: member.occupation_status || "",
-    marriedStatus: member.married_status || "",
-    isVisiting: member.is_visiting || false,
-    isFullMember: member.is_full_member || false,
-    baptized: member.baptized || false,
-    discipleshipClassId: member.discipleship_class_id || null,
-    completedClass: member.completed_class || false,
-    fellowshipCategory: member.fellowship_category || "",
-    fellowshipRole: member.fellowship_role || "",
-    serviceCategory: member.service_category || "",
-    serviceRole: member.service_role || "",
-    conversionDate: member.conversion_date || '',
-    nextOfKinFirstName: member.next_of_kin?.first_name || '',
-    nextOfKinLastName: member.next_of_kin?.last_name || '',
-    nextOfKinContactInfo: member.next_of_kin?.contact_info || '',
-    volunteeringRole: member.volunteering?.role || '',
-  };
+      // Prepare the data to map to the form
+      const nameParts = member.name ? member.name.split(' ') : [];
+      const firstName = nameParts[0] || '';
+      const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
+      const lastName = nameParts[nameParts.length - 1] || '';
+  
+      const mappedData = {
+        firstName,
+        middleName,
+        lastName,
+      dob: member.date_of_birth || "",
+      contactInfo: member.contact_info || "",
+      gender: member.gender || "",
+      location: member.location || "",
+      countyOfOrigin: member.county_of_origin || "",
+      occupationStatus: member.occupation_status || "",
+      marriedStatus: member.married_status || "",
+      isVisiting: member.is_visiting || false,
+      isFullMember: member.is_full_member || false,
+      baptized: member.baptized || false,
+      discipleshipClassId: member.discipleship_class_id || null,
+      completedClass: member.completed_class || false,
+      fellowshipCategory: member.fellowship_ministries || "",
+      serviceCategory: member.service_ministries || "",
+      conversionDate: member.conversion_date || '',
+      nextOfKinFirstName: member.nextOfKinFirstName || '',
+      nextOfKinLastName: member.nextOfKinLastName || '',
+      nextOfKinContactInfo: member.nextOfKinContactInfo || '',
+      volunteeringRole: member.volunteering?.role || '',
+    };
 
-  setEditingMember(mappedData);
-  setShowAddMemberForm(true);
+    // Set the editing member and show the form
+    setEditingMember(mappedData);
+    setShowAddMemberForm(true);
+  } catch (error) {
+    console.error('Error fetching member details:', error);
+    alert('Failed to fetch member details. Please try again.');
+  }
 };
+
+
+
 
 
 
@@ -246,11 +264,15 @@ const handleEditMember = (member) => {
                     </Button>
                   )}
                 </TableCell>
+         
                 <TableCell>
-                  <Button variant="ghost" onClick={() => handleEditMember(member)}>
+                  <Button variant="ghost" onClick={() => handleEditMember(member.id)}>
                     <Pencil className="h-4 w-4 text-blue-500" />
                   </Button>
                 </TableCell>
+            
+
+
               </TableRow>
             ))}
           </TableBody>

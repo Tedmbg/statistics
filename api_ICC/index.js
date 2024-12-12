@@ -296,16 +296,53 @@ app.post('/api/members/add', async (req, res) => {
     }
 });
 
-// Get all members
+// Get all members with pagination and optional search
 app.get('/api/members', async (req, res) => {
     try {
-      const result = await pool.query('SELECT * FROM members');
-      res.json(result.rows);
+        // Extract query parameters
+        const { limit, offset, search } = req.query;
+
+        // Set default values if not provided
+        const limitVal = parseInt(limit, 10) || 20; // Default to 20 members per request
+        const offsetVal = parseInt(offset, 10) || 0; // Default to start at 0
+
+        // Base query
+        let query = 'SELECT * FROM members';
+        let countQuery = 'SELECT COUNT(*) FROM members';
+        const values = [];
+        const countValues = [];
+
+        // If search term is provided, add WHERE clause
+        if (search) {
+            query += ' WHERE LOWER(name) LIKE $1';
+            countQuery += ' WHERE LOWER(name) LIKE $1';
+            const searchPattern = `%${search.toLowerCase()}%`;
+            values.push(searchPattern);
+            countValues.push(searchPattern);
+        }
+
+        // Add ORDER BY, LIMIT, OFFSET
+        query += ' ORDER BY name ASC LIMIT $' + (values.length + 1) + ' OFFSET $' + (values.length + 2);
+        values.push(limitVal);
+        values.push(offsetVal);
+
+        // Execute count query to get total number of members
+        const countResult = await pool.query(countQuery, countValues);
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        // Execute main query to get members
+        const result = await pool.query(query, values);
+
+        res.json({
+            members: result.rows,
+            total, // Total number of members matching the search criteria
+        });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Error fetching members' });
+        console.error(error);
+        res.status(500).json({ message: 'Error fetching members' });
     }
-  });
+});
+
 
 //Get all members count & allow yearmonth filter
 app.get('/api/members/count', async (req, res) => {
