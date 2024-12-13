@@ -352,37 +352,27 @@ app.post('/api/members/add', async (req, res) => {
 
 // Get all members with pagination and optional search
 app.get('/api/members', async (req, res) => {
+    const { limit, lastMemberId } = req.query;
+
+    const limitVal = parseInt(limit, 10) || 20; // Default to 20
+    const cursor = lastMemberId ? parseInt(lastMemberId, 10) : 0; // Default to start from 0
+
     try {
-        // Extract query parameters
-        const { limit, lastMemberId } = req.query;
-
-        // Set default limit if not provided
-        const limitVal = parseInt(limit, 10) || 20; // Default to 20 members
-
-        // Base query
-        let query = `
+        const query = `
             SELECT *
             FROM members
             WHERE is_visiting = FALSE
+            ${cursor > 0 ? `AND member_id > $1` : ''}
+            ORDER BY member_id ASC
+            LIMIT $${cursor > 0 ? 2 : 1}
         `;
-        const values = [];
 
-        // If lastMemberId is provided, fetch members with a higher ID
-        if (lastMemberId) {
-            query += ` AND member_id > $1`;
-            values.push(lastMemberId);
-        }
-
-        // Add LIMIT and ORDER BY
-        query += ` ORDER BY member_id ASC LIMIT $${values.length + 1}`;
-        values.push(limitVal);
-
-        // Execute query
-        const result = await pool.query(query, values);
+        const params = cursor > 0 ? [cursor, limitVal] : [limitVal];
+        const result = await pool.query(query, params);
 
         res.json({
             members: result.rows,
-            hasMore: result.rows.length === limitVal, // Indicate if there are more rows
+            hasMore: result.rows.length === limitVal, // Check if there are more results
         });
     } catch (error) {
         console.error('Error fetching members:', error.message);
