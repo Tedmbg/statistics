@@ -352,30 +352,47 @@ app.post('/api/members/add', async (req, res) => {
 
 // Get all members with pagination and optional search
 app.get('/api/members', async (req, res) => {
-    const { limit, lastMemberId } = req.query;
-
-    const limitVal = parseInt(limit, 10) || 20; // Default to 20
-    const cursor = lastMemberId ? parseInt(lastMemberId, 10) : 0; // Default to start from 0
-
     try {
-        const query = `
-            SELECT *
-            FROM members
-            WHERE is_visiting = FALSE
-            ${cursor > 0 ? `AND member_id > $1` : ''}
-            ORDER BY member_id ASC
-            LIMIT $${cursor > 0 ? 2 : 1}
-        `;
+        // Extract query parameters
+        const { limit, offset, search } = req.query;
 
-        const params = cursor > 0 ? [cursor, limitVal] : [limitVal];
-        const result = await pool.query(query, params);
+        // Set default values if not provided
+        const limitVal = parseInt(limit, 10) || 20; // Default to 20 members per request
+        const offsetVal = parseInt(offset, 10) || 0; // Default to start at 0
+
+        // Base query
+        let query = 'SELECT * FROM members';
+        let countQuery = 'SELECT COUNT(*) FROM members';
+        const values = [];
+        const countValues = [];
+
+        // If search term is provided, add WHERE clause
+        if (search) {
+            query += ' WHERE LOWER(name) LIKE $1';
+            countQuery += ' WHERE LOWER(name) LIKE $1';
+            const searchPattern = `%${search.toLowerCase()}%`;
+            values.push(searchPattern);
+            countValues.push(searchPattern);
+        }
+
+        // Add ORDER BY, LIMIT, OFFSET
+        query += ' ORDER BY member_id ASC LIMIT $' + (values.length + 1) + ' OFFSET $' + (values.length + 2);
+        values.push(limitVal);
+        values.push(offsetVal);
+
+        // Execute count query to get total number of members
+        const countResult = await pool.query(countQuery, countValues);
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        // Execute main query to get members
+        const result = await pool.query(query, values);
 
         res.json({
             members: result.rows,
-            hasMore: result.rows.length === limitVal, // Check if there are more results
+            total, // Total number of members matching the search criteria
         });
     } catch (error) {
-        console.error('Error fetching members:', error.message);
+        console.error(error);
         res.status(500).json({ message: 'Error fetching members' });
     }
 });
