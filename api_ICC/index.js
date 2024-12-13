@@ -21,6 +21,7 @@ const app = express();
 app.use(cors({
     origin: ['http://localhost:5173', 'https://statistics-production-032c.up.railway.app'], 
     methods: 'GET,POST,PUT,DELETE', 
+    credentials: true
 }));
 
 // Middleware to parse JSON
@@ -97,6 +98,8 @@ const authenticateAdmin = async (req, res, next) => {
 app.get('/', (req, res) => {
   res.send('API is working!');
 });
+
+app.options('*', cors());
 
 // GET /api/members - Fetch all members with related next of kin and volunteering details
 // app.get('/api/members', async (req, res) => {
@@ -2019,6 +2022,7 @@ app.get('/api/users/role', (req, res) => {
 // Update User Login (Password Reset) API using Email
 app.put('/api/users/update', authenticateAdmin, async (req, res) => {
     const { email, newPassword } = req.body;
+    res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
 
     // Validate input
     if (!email || !newPassword) {
