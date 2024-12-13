@@ -1781,7 +1781,7 @@ app.post('/api/users/login', cors(), async (req, res) => {
         const user = userResult.rows[0];
 
         // Check if the user has a valid role
-        const allowedRoles = ['Admin', 'Pastor', 'Leader', 'usher' ];
+        const allowedRoles = ['Admin', 'Pastor', 'Leader', 'usher', 'instructor' ];
         if (!allowedRoles.includes(user.role)) {
             return res.status(403).json({ status: 'error', message: 'Access denied. Invalid role.' });
         }
@@ -1827,7 +1827,7 @@ app.post('/api/users/create', authenticateAdmin, async (req, res) => {
     }
 
     // Validate role
-    const allowedRoles = ['Admin', 'Pastor', 'Leader', 'usher'];
+    const allowedRoles = ['Admin', 'Pastor', 'Leader', 'usher', 'instructor'];
     if (!allowedRoles.includes(role)) {
         return res.status(403).json({ status: 'error', message: 'Invalid role specified' });
     }
