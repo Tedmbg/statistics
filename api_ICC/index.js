@@ -1649,6 +1649,31 @@ app.get('/api/volunteers', async (req, res) => {
     }
 });
 
+// Example: GET /api/ministries?type=Fellowship
+// Returns an array of ministry names for the given type.
+
+app.get('/api/ministries', async (req, res) => {
+    const { type } = req.query;
+
+    if (!type) {
+        return res.status(400).json({ error: 'Type query parameter is required (e.g., ?type=Fellowship)' });
+    }
+
+    try {
+        const result = await pool.query(
+            'SELECT ministry_name FROM ministries WHERE type = $1',
+            [type]
+        );
+
+        const ministries = result.rows.map(row => row.ministry_name);
+        res.json(ministries);
+    } catch (error) {
+        console.error('Error fetching ministries:', error);
+        res.status(500).json({ error: 'Failed to fetch ministries' });
+    }
+});
+
+
 
 
 // Total Count of Volunteers API
