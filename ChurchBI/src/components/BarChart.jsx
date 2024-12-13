@@ -1,16 +1,30 @@
-// components/BarChart.js
-import { Card, Typography, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
-import { useState } from "react";
+// src/components/BarChart.js
+import {
+  Card,
+  Typography,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+} from "@mui/material";
 import { Bar } from "react-chartjs-2";
 
-const BarChart = ({ data, options, title, height = 545, onDateChange }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date().getFullYear().toString()); // Default to current year
+const BarChart = ({
+  data,
+  options,
+  title,
+  height = 545,
+  onDateChange,
+  selectedYear, // Renamed from selectedDate to selectedYear
+}) => {
+  // Default to current year if not provided
+  const currentYear = new Date().getFullYear();
+  const displayYear = typeof selectedYear === "number" ? selectedYear : currentYear;
 
   const handleDateChange = (event) => {
-    const newDate = event.target.value;
-    setSelectedDate(newDate);
+    const newYear = parseInt(event.target.value, 10);
     if (onDateChange) {
-      onDateChange(newDate); // Communicate date change to parent
+      onDateChange(newYear); // Pass the correctly defined variable
     }
   };
 
@@ -22,22 +36,21 @@ const BarChart = ({ data, options, title, height = 545, onDateChange }) => {
         </Typography>
       )}
 
-      {/* Date Selector */}
+      {/* Year Selector */}
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <FormControl sx={{ width: "120px", marginBottom: "1rem" }}>
-          <InputLabel id="date-select-label">Year</InputLabel>
+          <InputLabel id="year-select-label">Year</InputLabel>
           <Select
-            labelId="date-select-label"
-            value={selectedDate}
+            labelId="year-select-label"
+            value={displayYear} // Use displayYear for the Select's value
             onChange={handleDateChange}
             label="Year"
             size="small"
           >
-            {/* Generate year options dynamically */}
             {Array.from({ length: 10 }, (_, i) => {
-              const year = new Date().getFullYear() - i;
+              const year = currentYear - i;
               return (
-                <MenuItem key={year} value={year.toString()}>
+                <MenuItem key={year} value={year}>
                   {year}
                 </MenuItem>
               );
@@ -47,7 +60,14 @@ const BarChart = ({ data, options, title, height = 545, onDateChange }) => {
       </div>
 
       <div style={{ height }}>
-        <Bar data={data} options={options} />
+        {/* Ensure data and options are defined to prevent errors */}
+        {data && options ? (
+          <Bar data={data} options={options} />
+        ) : (
+          <Typography align="center" mt={4}>
+            No data available.
+          </Typography>
+        )}
       </div>
     </Card>
   );

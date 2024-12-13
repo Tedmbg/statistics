@@ -18,6 +18,7 @@ import ServiceMinistry from "./pages/ministries/service-ministry/ServiceMinistry
 import CreateMinistry from "./pages/ministries/create-ministry/CreateMinistry";
 import FellowshipMinistry from "./pages/ministries/fellowship-ministry/FellowshipMinistry";
 import Baptism from "./pages/membership-management/baptism/Baptism";
+import './index.css'; // Global CSS
 
 // ProtectedRoute component checks if the user is logged in
 function ProtectedRoute({ children }) {

@@ -125,7 +125,7 @@ export default function Demographics() {
           }}
         >
           {/* Year Selector */}
-          <Box
+          {/* <Box
             sx={{
               width: "100%", // Span across the top
               display: "flex",
@@ -151,7 +151,7 @@ export default function Demographics() {
                 })}
               </Select>
             </FormControl>
-          </Box>
+          </Box> */}
 
           {/* Charts */}
           <Box

@@ -18,12 +18,12 @@ function FellowshipMinistry() {
       {
         label: "Male",
         data: [10, 20, 15, 25, 20, 30, 20, 25, 15, 18, 22, 19],
-        backgroundColor: "#4e79a7",
+        backgroundColor: "#78BFF1",
       },
       {
         label: "Female",
         data: [15, 10, 18, 17, 10, 8, 15, 12, 10, 14, 16, 13],
-        backgroundColor: "#a0cbe8",
+        backgroundColor: "#B898FF",
       },
     ],
   };
@@ -72,22 +72,36 @@ function FellowshipMinistry() {
        
         </Grid>
 
-        <Grid item xs={12} md={3} sx={{ marginRight: '8rem' }}>
+        <Grid item xs={12} md={3}>
           <Card
             sx={{
               padding: "1.5rem",
-              backgroundColor: "#27733a",
-              color: "#fff",
               height: "15.75rem",
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
-              alignItems: "center",
+              backgroundColor: "#FFF",
             }}
           >
-             <img src="/assets/volunteer 1.png" alt="Volunteer" />
-            <Typography variant="h6">Total Number of Meetings</Typography>
-            <Typography variant="h3">21</Typography>
+            <Typography variant="h6" style={{ textAlign: "center" }}>
+              Gender Ratio
+            </Typography>
+            <Box display="flex" justifyContent="space-between">
+              <img
+                src="/assets/male_avatar.png"
+                style={{ height: "50px", width: "50px" }}
+              />
+              <Typography sx={{ fontSize: "1.575rem", mt: 1, pl: 1, pr: 0.1 }}>
+                40%
+              </Typography>
+              <img
+                src="/assets/female_avatar.png"
+                style={{ height: "50px", width: "50px" }}
+              />
+              <Typography sx={{ fontSize: "1.575rem", mt: 1, pl: 1 }}>
+                60%
+              </Typography>
+            </Box>
           </Card>
         </Grid>
 
@@ -114,7 +128,7 @@ function FellowshipMinistry() {
 </Grid>
         {/* Ministry Growth Chart */}
         <Grid marginTop={6} marginBottom={6}>
-        <Card sx={{ height: 630}}>
+        <Card sx={{ height: 730}}>
         <BarChart
               data={barChartData}
               options={barChartOptions}

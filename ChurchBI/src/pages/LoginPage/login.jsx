@@ -4,7 +4,7 @@ import { Box, Button, Grid, TextField, Typography } from "@mui/material";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/Urim_logo.png";
-import video from "../../assets/urim logging.mp4";
+import video from "../../assets/urim_logging.mp4";
 
 export default function LoginScreen() {
   const { login } = useContext(AuthContext);
