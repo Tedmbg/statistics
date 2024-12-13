@@ -118,7 +118,9 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
         serviceCategory: initialData.serviceCategory || "",
         serviceRole: initialData.serviceRole || "",
         conversionDate: initialData.conversionDate || '',
-        nextOfKin: initialData.nextOfKin || { firstName: "", lastName: "", contactInfo: "" },
+        nextOfKinFirstName: initialData.nextOfKinFirstName || '', // Mapped nextOfKin data
+        nextOfKinLastName: initialData.nextOfKinLastName || '',
+        nextOfKinContactInfo: initialData.nextOfKinContactInfo || '',
         volunteeringRole: initialData.volunteeringRole || '',
       };
       dispatch({ type: 'SET_INITIAL_DATA', payload: mappedData });
@@ -137,6 +139,24 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
     } else {
       dispatch({ type: 'UPDATE_FIELD', field, value });
     }
+  };
+
+   // Disable 'Is a Full Member' checkbox when the member is 'Visiting' or 'Aspiring Member'
+   const isFullMemberDisabled = formData.isVisiting || formData.memberStatus === "Visiting" || formData.memberStatus === "Aspiring Member";
+
+   const handleStatusChange = (event) => {
+    const { value } = event.target;
+    dispatch({
+      type: 'UPDATE_FIELD',
+      field: 'memberStatus',
+      value,
+    });
+    // Update 'isVisiting' if status is Visiting or Aspiring Member
+    dispatch({
+      type: 'UPDATE_FIELD',
+      field: 'isVisiting',
+      value: value === "Visiting" || value === "Aspiring Member",
+    });
   };
 
   const discipleshipClasses = [
@@ -457,15 +477,14 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                 </Grid>
                 <Grid item xs={12} md={4}>
                   <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
-                    <InputLabel>Visitors</InputLabel>
+                    <InputLabel>Status</InputLabel>
                     <Select
-                      value={formData.isVisiting ? "Visiting" : "Aspiring Member"}
-                      onChange={(e) =>
-                        handleInputChange("isVisiting", e.target.value === "Visiting")
-                      }
+                      value={formData.memberStatus}
+                      onChange={handleStatusChange}
                     >
                       <MenuItem value="Visiting">Just Visiting</MenuItem>
                       <MenuItem value="Aspiring Member">Aspiring Member</MenuItem>
+                      <MenuItem value="None">None</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -521,33 +540,29 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
             <Typography variant="h6">General Info</Typography>
             <Box sx={{ marginTop: '1rem' }}>
               <Grid container spacing={2}>
-                <Grid item xs={12} md={3}>
-                  <FormControl
-                    fullWidth
-                    variant="outlined"
-                    sx={{ borderRadius: '8px', backgroundColor: '#ffffff', height: '55px' }}
-                  >
-                    <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>
-                      <label style={{ display: 'flex', alignItems: 'center' }}>
-                        <input
-                          type="checkbox"
-                          style={{
-                            width: '20px',
-                            height: '20px',
-                            transform: 'scale(1.5)',
-                            marginRight: '8px',
-                            marginTop: '15px',
-                            marginLeft: '16px',
-                            textAlign: 'justify'
-                          }}
-                          checked={formData.isFullMember}
-                          onChange={(e) => handleInputChange("isFullMember", e.target.checked)}
-                        />
-                        Is a Full Member?
-                      </label>
-                    </Typography>
-                  </FormControl>
-                </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff', height: '55px' }}>
+                  <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type="checkbox"
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          transform: 'scale(1.5)',
+                          marginRight: '8px',
+                          marginTop: '15px',
+                          marginLeft: '16px',
+                        }}
+                        checked={formData.isFullMember}
+                        onChange={(e) => handleInputChange("isFullMember", e.target.checked)}
+                        disabled={isFullMemberDisabled}
+                      />
+                      Is a Full Member?
+                    </label>
+                  </Typography>
+                </FormControl>
+              </Grid>
                 <Grid item xs={12} md={3}>
                   <FormControl
                     fullWidth
@@ -783,11 +798,9 @@ AddMemberForm.propTypes = {
     serviceCategory: PropTypes.string,
     serviceRole: PropTypes.string,
     conversionDate: PropTypes.string,
-    nextOfKin: PropTypes.shape({
-      firstName: PropTypes.string,
-      lastName: PropTypes.string,
-      contactInfo: PropTypes.string,
-    }),
+    nextOfKinFirstName: PropTypes.string,
+    nextOfKinLastName: PropTypes.string,
+    nextOfKinContactInfo: PropTypes.string,
     volunteeringRole: PropTypes.string,
   }),
   onBack: PropTypes.func.isRequired,

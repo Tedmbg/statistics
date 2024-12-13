@@ -94,8 +94,90 @@ app.get('/', (req, res) => {
   res.send('API is working!');
 });
 
-// Adding memeber 
-// Adding Member with changes to work with volunteers and ministries 
+// GET /api/members - Fetch all members with related next of kin and volunteering details
+app.get('/api/members', async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                m.member_id,
+                m.name,
+                m.contact_info,
+                m.date_of_birth,
+                m.married_status,
+                m.occupation_status,
+                m.fellowship_ministries,
+                m.service_ministries,
+                m.baptized,
+                m.conversion_date,
+                m.is_full_member,
+                m.is_visiting,
+                m.location,
+                m.county_of_origin,
+                m.gender,
+                m.discipleship_class_id,
+                m.completed_class,
+                m.membership_date,
+                nk.first_name AS next_of_kin_first_name,
+                nk.last_name AS next_of_kin_last_name,
+                nk.contact_info AS next_of_kin_contact_info,
+                v.volunteer_id,
+                v.role AS volunteer_role
+            FROM 
+                members m
+            LEFT JOIN 
+                next_of_kin nk ON m.member_id = nk.member_id
+            LEFT JOIN 
+                volunteers v ON m.member_id = v.member_id
+            ORDER BY 
+                m.member_id ASC;
+        `;
+        const result = await pool.query(query);
+
+        // Transform the data to group related information
+        const members = {};
+
+        result.rows.forEach(row => {
+            if (!members[row.member_id]) {
+                members[row.member_id] = {
+                    id: row.member_id,
+                    name: row.name,
+                    contactInfo: row.contact_info,
+                    dateOfBirth: row.date_of_birth,
+                    marriedStatus: row.married_status,
+                    occupationStatus: row.occupation_status,
+                    fellowshipMinistries: row.fellowship_ministries,
+                    serviceMinistries: row.service_ministries,
+                    baptized: row.baptized,
+                    conversionDate: row.conversion_date,
+                    isFullMember: row.is_full_member,
+                    isVisiting: row.is_visiting,
+                    location: row.location,
+                    countyOfOrigin: row.county_of_origin,
+                    gender: row.gender,
+                    discipleshipClassId: row.discipleship_class_id,
+                    completedClass: row.completed_class,
+                    membershipDate: row.membership_date,
+                    nextOfKin: row.next_of_kin_first_name ? {
+                        firstName: row.next_of_kin_first_name,
+                        lastName: row.next_of_kin_last_name,
+                        contactInfo: row.next_of_kin_contact_info,
+                    } : null,
+                    volunteering: row.volunteer_id ? {
+                        volunteerId: row.volunteer_id,
+                        role: row.volunteer_role,
+                    } : null,
+                };
+            }
+        });
+
+        res.json(Object.values(members));
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error fetching members' });
+    }
+});
+
+// POST /api/members/add - Add a new member
 app.post('/api/members/add', async (req, res) => {
     const {
         sir_name,
@@ -258,19 +340,53 @@ app.post('/api/members/add', async (req, res) => {
     }
 });
 
-
-
-
-// Get all members
+// Get all members with pagination and optional search
 app.get('/api/members', async (req, res) => {
     try {
-      const result = await pool.query('SELECT * FROM members');
-      res.json(result.rows);
+        // Extract query parameters
+        const { limit, offset, search } = req.query;
+
+        // Set default values if not provided
+        const limitVal = parseInt(limit, 10) || 20; // Default to 20 members per request
+        const offsetVal = parseInt(offset, 10) || 0; // Default to start at 0
+
+        // Base query
+        let query = 'SELECT * FROM members';
+        let countQuery = 'SELECT COUNT(*) FROM members';
+        const values = [];
+        const countValues = [];
+
+        // If search term is provided, add WHERE clause
+        if (search) {
+            query += ' WHERE LOWER(name) LIKE $1';
+            countQuery += ' WHERE LOWER(name) LIKE $1';
+            const searchPattern = `%${search.toLowerCase()}%`;
+            values.push(searchPattern);
+            countValues.push(searchPattern);
+        }
+
+        // Add ORDER BY, LIMIT, OFFSET
+        query += ' ORDER BY name ASC LIMIT $' + (values.length + 1) + ' OFFSET $' + (values.length + 2);
+        values.push(limitVal);
+        values.push(offsetVal);
+
+        // Execute count query to get total number of members
+        const countResult = await pool.query(countQuery, countValues);
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        // Execute main query to get members
+        const result = await pool.query(query, values);
+
+        res.json({
+            members: result.rows,
+            total, // Total number of members matching the search criteria
+        });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Error fetching members' });
+        console.error(error);
+        res.status(500).json({ message: 'Error fetching members' });
     }
-  });
+});
+
 
 //Get all members count & allow yearmonth filter
 app.get('/api/members/count', async (req, res) => {
