@@ -5,6 +5,7 @@ const cors = require('cors')
 const cron = require('node-cron');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const morgan = require('morgan');
 
 
 // Load environment variables
@@ -48,6 +49,9 @@ pool.connect((err, client, release) => {
   console.log('Connected to the database');
   release();
 });
+
+app.use(morgan('dev')); // Log all HTTP requests
+
 
 // Schedule a task to run daily at midnight
 cron.schedule('0 0 * * *', async () => {
@@ -95,89 +99,90 @@ app.get('/', (req, res) => {
 });
 
 // GET /api/members - Fetch all members with related next of kin and volunteering details
-app.get('/api/members', async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                m.member_id,
-                m.name,
-                m.contact_info,
-                m.date_of_birth,
-                m.married_status,
-                m.occupation_status,
-                m.fellowship_ministries,
-                m.service_ministries,
-                m.baptized,
-                m.conversion_date,
-                m.is_full_member,
-                m.is_visiting,
-                m.location,
-                m.county_of_origin,
-                m.gender,
-                m.discipleship_class_id,
-                m.completed_class,
-                m.membership_date,
-                nk.first_name AS next_of_kin_first_name,
-                nk.last_name AS next_of_kin_last_name,
-                nk.contact_info AS next_of_kin_contact_info,
-                v.volunteer_id,
-                v.role AS volunteer_role
-            FROM 
-                members m
-            LEFT JOIN 
-                next_of_kin nk ON m.member_id = nk.member_id
-            LEFT JOIN 
-                volunteers v ON m.member_id = v.member_id
-            ORDER BY 
-                m.member_id ASC;
-        `;
-        const result = await pool.query(query);
+// app.get('/api/members', async (req, res) => {
+//     try {
+//         const query = `
+//             SELECT 
+//                 m.member_id,
+//                 m.name,
+//                 m.contact_info,
+//                 m.date_of_birth,
+//                 m.married_status,
+//                 m.occupation_status,
+//                 m.fellowship_ministries,
+//                 m.service_ministries,
+//                 m.baptized,
+//                 m.conversion_date,
+//                 m.is_full_member,
+//                 m.is_visiting,
+//                 m.location,
+//                 m.county_of_origin,
+//                 m.gender,
+//                 m.discipleship_class_id,
+//                 m.completed_class,
+//                 m.membership_date,
+//                 nk.first_name AS next_of_kin_first_name,
+//                 nk.last_name AS next_of_kin_last_name,
+//                 nk.contact_info AS next_of_kin_contact_info,
+//                 v.volunteer_id,
+//                 v.role AS volunteer_role
+//             FROM 
+//                 members m
+//             LEFT JOIN 
+//                 next_of_kin nk ON m.member_id = nk.member_id
+//             LEFT JOIN 
+//                 volunteers v ON m.member_id = v.member_id
+//             ORDER BY 
+//                 m.member_id ASC;
+//         `;
+//         const result = await pool.query(query);
 
-        // Transform the data to group related information
-        const members = {};
+//         // Transform the data to group related information
+//         const members = {};
 
-        result.rows.forEach(row => {
-            if (!members[row.member_id]) {
-                members[row.member_id] = {
-                    id: row.member_id,
-                    name: row.name,
-                    contactInfo: row.contact_info,
-                    dateOfBirth: row.date_of_birth,
-                    marriedStatus: row.married_status,
-                    occupationStatus: row.occupation_status,
-                    fellowshipMinistries: row.fellowship_ministries,
-                    serviceMinistries: row.service_ministries,
-                    baptized: row.baptized,
-                    conversionDate: row.conversion_date,
-                    isFullMember: row.is_full_member,
-                    isVisiting: row.is_visiting,
-                    location: row.location,
-                    countyOfOrigin: row.county_of_origin,
-                    gender: row.gender,
-                    discipleshipClassId: row.discipleship_class_id,
-                    completedClass: row.completed_class,
-                    membershipDate: row.membership_date,
-                    nextOfKin: row.next_of_kin_first_name ? {
-                        firstName: row.next_of_kin_first_name,
-                        lastName: row.next_of_kin_last_name,
-                        contactInfo: row.next_of_kin_contact_info,
-                    } : null,
-                    volunteering: row.volunteer_id ? {
-                        volunteerId: row.volunteer_id,
-                        role: row.volunteer_role,
-                    } : null,
-                };
-            }
-        });
+//         result.rows.forEach(row => {
+//             if (!members[row.member_id]) {
+//                 members[row.member_id] = {
+//                     id: row.member_id,
+//                     name: row.name,
+//                     contactInfo: row.contact_info,
+//                     dateOfBirth: row.date_of_birth,
+//                     marriedStatus: row.married_status,
+//                     occupationStatus: row.occupation_status,
+//                     fellowshipMinistries: row.fellowship_ministries,
+//                     serviceMinistries: row.service_ministries,
+//                     baptized: row.baptized,
+//                     conversionDate: row.conversion_date,
+//                     isFullMember: row.is_full_member,
+//                     isVisiting: row.is_visiting,
+//                     location: row.location,
+//                     countyOfOrigin: row.county_of_origin,
+//                     gender: row.gender,
+//                     discipleshipClassId: row.discipleship_class_id,
+//                     completedClass: row.completed_class,
+//                     membershipDate: row.membership_date,
+//                     nextOfKin: row.next_of_kin_first_name ? {
+//                         firstName: row.next_of_kin_first_name,
+//                         lastName: row.next_of_kin_last_name,
+//                         contactInfo: row.next_of_kin_contact_info,
+//                     } : null,
+//                     volunteering: row.volunteer_id ? {
+//                         volunteerId: row.volunteer_id,
+//                         role: row.volunteer_role,
+//                     } : null,
+//                 };
+//             }
+//         });
 
-        res.json(Object.values(members));
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error fetching members' });
-    }
-});
+//         res.json(Object.values(members));
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: 'Error fetching members' });
+//     }
+// });
 
 // POST /api/members/add - Add a new member
+>>>>>>>>> Temporary merge branch 2
 app.post('/api/members/add', async (req, res) => {
     const {
         sir_name,
@@ -340,6 +345,12 @@ app.post('/api/members/add', async (req, res) => {
     }
 });
 
+<<<<<<<<< Temporary merge branch 1
+
+
+
+// Get all members
+=========
 // Get all members with pagination and optional search
 app.get('/api/members', async (req, res) => {
     try {
@@ -366,7 +377,7 @@ app.get('/api/members', async (req, res) => {
         }
 
         // Add ORDER BY, LIMIT, OFFSET
-        query += ' ORDER BY name ASC LIMIT $' + (values.length + 1) + ' OFFSET $' + (values.length + 2);
+        query += ' ORDER BY member_id ASC LIMIT $' + (values.length + 1) + ' OFFSET $' + (values.length + 2);
         values.push(limitVal);
         values.push(offsetVal);
 
@@ -383,6 +394,47 @@ app.get('/api/members', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
+        res.status(500).json({ message: 'Error fetching members' });
+    }
+});
+
+
+app.get('/api/members2', async (req, res) => {
+    const { limit, lastMemberId } = req.query;
+
+    const limitVal = parseInt(limit, 10) || 20; // Default to 20
+    const cursor = lastMemberId ? parseInt(lastMemberId, 10) : null; // Use lastMemberId for cursor-based pagination
+
+    try {
+        let query = `
+            SELECT *
+            FROM members
+            WHERE is_visiting = FALSE
+        `;
+        const params = [];
+
+        // Add cursor-based pagination logic
+        if (cursor) {
+            query += ` AND member_id > $1`;
+            params.push(cursor);
+        }
+
+        query += `
+            ORDER BY member_id ASC
+            LIMIT $${params.length + 1}
+        `;
+        params.push(limitVal);
+
+        console.log('Executing query:', query, params); // Log the query and parameters
+
+        const result = await pool.query(query, params);
+
+        res.json({
+            members: result.rows,
+            hasMore: result.rows.length === limitVal, // Indicate if more rows are available
+        });
+    } catch (error) {
+        console.error('Error fetching members:', error.message);
         res.status(500).json({ message: 'Error fetching members' });
     }
 });
@@ -1171,219 +1223,22 @@ app.get('/api/fellowship-members-per-month', async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
-app.put('/api/members/:id', async (req, res) => {
-    const memberId = parseInt(req.params.id, 10);
-    const {
-        sir_name,
-        middle_name,
-        last_name,
-        date_of_birth,
-        contact_info,
-        gender,
-        location,
-        county_of_origin,
-        occupation_status,
-        married_status,
-        is_visiting,
-        fellowship_ministries,
-        service_ministries,
-        is_full_member,
-        baptized,
-        conversion_date,
-        discipleship_class_id,
-        completed_class,
-        next_of_kin,
-        volunteering,
-    } = req.body;
 
-    try {
-        // Step 1: Check if the member exists
-        const memberCheck = await pool.query('SELECT * FROM members WHERE member_id = $1', [memberId]);
-        if (memberCheck.rowCount === 0) {
-            return res.status(404).json({ error: 'Member not found' });
-        }
 
-        // Step 2: Update the members table
-        const updateMemberQuery = `
-            UPDATE members
-            SET 
-                name = $1,
-                contact_info = $2,
-                date_of_birth = $3,
-                married_status = $4,
-                occupation_status = $5,
-                fellowship_ministries = $6,
-                service_ministries = $7,
-                baptized = $8,
-                conversion_date = $9,
-                is_full_member = $10,
-                is_visiting = $11,
-                location = $12,
-                county_of_origin = $13,
-                gender = $14,
-                discipleship_class_id = $15,
-                completed_class = $16,
-                membership_date = NOW()
-            WHERE member_id = $17
-            RETURNING *;
-        `;
-
-        const updateMemberValues = [
-            `${sir_name} ${middle_name} ${last_name}`.trim(),
-            contact_info,
-            date_of_birth,
-            married_status,
-            occupation_status,
-            fellowship_ministries,
-            service_ministries,
-            !!baptized, // Convert to boolean
-            conversion_date,
-            !!is_full_member, // Convert to boolean
-            !!is_visiting, // Convert to boolean
-            location,
-            county_of_origin,
-            gender,
-            discipleship_class_id,
-            completed_class === true, // Ensure boolean value
-            memberId,
-        ];
-
-        const updatedMemberResult = await pool.query(updateMemberQuery, updateMemberValues);
-        const updatedMember = updatedMemberResult.rows[0];
-
-        // Step 3: Update the next_of_kin table (if provided)
-        if (next_of_kin && next_of_kin.first_name && next_of_kin.last_name && next_of_kin.contact_info) {
-            // Check if next_of_kin exists for this member
-            const nextOfKinCheck = await pool.query('SELECT * FROM next_of_kin WHERE member_id = $1', [memberId]);
-
-            if (nextOfKinCheck.rowCount > 0) {
-                // Update existing next_of_kin
-                const updateNextOfKinQuery = `
-                    UPDATE next_of_kin
-                    SET 
-                        first_name = $1,
-                        last_name = $2,
-                        contact_info = $3
-                    WHERE member_id = $4
-                    RETURNING *;
-                `;
-                const updateNextOfKinValues = [
-                    next_of_kin.first_name,
-                    next_of_kin.last_name,
-                    next_of_kin.contact_info,
-                    memberId,
-                ];
-
-                await pool.query(updateNextOfKinQuery, updateNextOfKinValues);
-            } else {
-                // Insert new next_of_kin
-                const insertNextOfKinQuery = `
-                    INSERT INTO next_of_kin (member_id, first_name, last_name, contact_info)
-                    VALUES ($1, $2, $3, $4);
-                `;
-                const insertNextOfKinValues = [
-                    memberId,
-                    next_of_kin.first_name,
-                    next_of_kin.last_name,
-                    next_of_kin.contact_info,
-                ];
-
-                await pool.query(insertNextOfKinQuery, insertNextOfKinValues);
-            }
-        }
-
-        // Step 4: Update the volunteers table (if provided)
-        if (volunteering && volunteering.role) {
-            // Check if volunteering record exists for this member
-            const volunteerCheck = await pool.query('SELECT * FROM volunteers WHERE member_id = $1', [memberId]);
-
-            if (volunteerCheck.rowCount > 0) {
-                // Update existing volunteer
-                const updateVolunteerQuery = `
-                    UPDATE volunteers
-                    SET role = $1
-                    WHERE member_id = $2
-                    RETURNING *;
-                `;
-                const updateVolunteerValues = [
-                    volunteering.role,
-                    memberId,
-                ];
-
-                await pool.query(updateVolunteerQuery, updateVolunteerValues);
-            } else {
-                // Insert new volunteer
-                const nextVolunteerIdResult = await pool.query('SELECT COALESCE(MAX(volunteer_id), 0) + 1 AS next_id FROM volunteers');
-                const nextVolunteerId = nextVolunteerIdResult.rows[0].next_id;
-
-                const insertVolunteerQuery = `
-                    INSERT INTO volunteers (volunteer_id, member_id, role)
-                    VALUES ($1, $2, $3);
-                `;
-                const insertVolunteerValues = [
-                    nextVolunteerId,
-                    memberId,
-                    volunteering.role,
-                ];
-
-                await pool.query(insertVolunteerQuery, insertVolunteerValues);
-            }
-        }
-            // Respond with the updated member details
-            res.status(200).json({
-                message: 'Member updated successfully',
-                member: updatedMember,
-            });
-    
-        } catch (error) {
-            console.error('Error updating member:', error.message);
-            res.status(500).json({ error: 'Internal Server Error' });
-        }
-    });
-
-        app.get('/api/members/:id', async (req, res) => {
-            const memberId = req.params.id;
-            
-            try {
-              // Fetch member data
-              const memberQuery = 'SELECT * FROM members WHERE member_id = $1';
-              const memberResult = await pool.query(memberQuery, [memberId]);
-          
-              if (memberResult.rowCount === 0) {
-                return res.status(404).json({ error: 'Member not found' });
-              }
-          
-              const member = memberResult.rows[0];
-          
-              // Fetch next of kin data from the next_of_kin table
-              const nextOfKinQuery = 'SELECT * FROM next_of_kin WHERE member_id = $1';
-              const nextOfKinResult = await pool.query(nextOfKinQuery, [memberId]);
-          
-              const nextOfKin = nextOfKinResult.rows[0] || {}; // Use the first result or an empty object if none found
-          
-              // Combine member and next of kin data
-              const responseData = {
-                ...member,
-                nextOfKinFirstName: nextOfKin.first_name || '',
-                nextOfKinLastName: nextOfKin.last_name || '',
-                nextOfKinContactInfo: nextOfKin.contact_info || '',
-              };
-          
-              res.json(responseData); // Send the combined data back to the frontend
-            } catch (error) {
-              console.error('Error fetching member data:', error.message);
-              res.status(500).json({ error: 'Error fetching member details' });
-            }
-          });
-          
 // Age distribution based on completed and not completed discipleship classes
 app.get('/api/members/age-distribution-dis', async (req, res) => {
     const { year } = req.query; // Get the year from the query parameters
 
     try {
+        // Validate year: It must be an integer if provided
+        if (year && isNaN(parseInt(year, 10))) {
+            return res.status(400).json({ status: 'error', message: 'Invalid year parameter' });
+        }
+
+        // Build query with optional year filter
         const query = `
             SELECT
-                EXTRACT(YEAR FROM m.membership_date) AS year,
+                EXTRACT(YEAR FROM m.membership_date)::INTEGER AS year, -- Cast year to INTEGER
                 CASE
                     WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
                     WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
@@ -1400,27 +1255,32 @@ app.get('/api/members/age-distribution-dis', async (req, res) => {
             WHERE
                 m.is_visiting = FALSE -- Exclude visiting members
                 AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Only include members aged 18+
-                ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''} -- Filter by year if provided
+                ${year ? 'AND EXTRACT(YEAR FROM m.membership_date) = $1' : ''} -- Filter by year if provided
             GROUP BY
                 year, age_range
             ORDER BY
                 year, age_range;
         `;
 
-        const result = await pool.query(query);
+        // Execute query with or without year parameter
+        const result = year
+            ? await pool.query(query, [parseInt(year, 10)]) // Pass year as integer
+            : await pool.query(query); // Execute without year filter
+
         res.json({
             status: 'success',
             data: result.rows,
-            year: year || 'All Years' // Include year information in the response
+            year: year ? parseInt(year, 10) : 'All Years' // Include year info
         });
     } catch (error) {
-        console.error(error.message);
+        console.error('Error fetching member data:', error.message);
         res.status(500).send('Server Error');
     }
 });
 
+
 // Age distribution based on completed and not completed discipleship classes, grouped by year and age group
-app.get('/api/members/age-distribution-dis2', async (req, res) => {
+app.get('/api/members-dis/age-distribution-dis2', async (req, res) => {
     const { year } = req.query; // Get the year from the query parameters
 
     // Use the current year if no year is provided
@@ -1430,7 +1290,7 @@ app.get('/api/members/age-distribution-dis2', async (req, res) => {
     try {
         const query = `
             SELECT
-                EXTRACT(YEAR FROM m.membership_date) AS year,
+                EXTRACT(YEAR FROM m.membership_date):: INTEGER AS year,
                 CASE
                     WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
                     WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
@@ -1465,7 +1325,6 @@ app.get('/api/members/age-distribution-dis2', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
-
 
 
 // work status distribution-discipleship classes
@@ -1832,6 +1691,31 @@ app.get('/api/volunteers', async (req, res) => {
     }
 });
 
+// Example: GET /api/ministries?type=Fellowship
+// Returns an array of ministry names for the given type.
+
+app.get('/api/ministries', async (req, res) => {
+    const { type } = req.query;
+
+    if (!type) {
+        return res.status(400).json({ error: 'Type query parameter is required (e.g., ?type=Fellowship)' });
+    }
+
+    try {
+        const result = await pool.query(
+            'SELECT ministry_name FROM ministries WHERE type = $1',
+            [type]
+        );
+
+        const ministries = result.rows.map(row => row.ministry_name);
+        res.json(ministries);
+    } catch (error) {
+        console.error('Error fetching ministries:', error);
+        res.status(500).json({ error: 'Failed to fetch ministries' });
+    }
+});
+
+
 
 
 // Total Count of Volunteers API
@@ -2131,6 +2015,299 @@ app.get('/api/users/role', (req, res) => {
         res.status(401).json({ status: 'error', message: 'Invalid or expired token' });
     }
 });
+
+
+// Update User Login (Password Reset) API using Email
+app.put('/api/users/update', authenticateAdmin, async (req, res) => {
+    const { email, newPassword } = req.body;
+
+    // Validate input
+    if (!email || !newPassword) {
+        return res.status(400).json({ status: 'error', message: 'Email and new password are required' });
+    }
+
+    try {
+        // Check if the user exists based on email
+        const userQuery = `
+            SELECT user_id, contact_details AS email, role
+            FROM users
+            WHERE contact_details = $1
+        `;
+        const userResult = await pool.query(userQuery, [email]);
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'User with the specified email not found' });
+        }
+
+        const user = userResult.rows[0];
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update the user's password
+        const updateQuery = `
+            UPDATE users
+            SET password = $1, date_updated = CURRENT_TIMESTAMP
+            WHERE user_id = $2
+            RETURNING user_id, contact_details AS email, role;
+        `;
+
+        const updateResult = await pool.query(updateQuery, [hashedPassword, user.user_id]);
+
+        const updatedUser = updateResult.rows[0];
+
+        res.status(200).json({
+            status: 'success',
+            message: 'User password updated successfully',
+            data: {
+                user_id: updatedUser.user_id,
+                email: updatedUser.email,
+                role: updatedUser.role
+            }
+        });
+    } catch (err) {
+        console.error('Error updating user password:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+// Get Instructors API
+app.get('/api/instructors', authenticateAdmin, async (req, res) => {
+    try {
+        // Query to fetch users with the role 'Leader'
+        const query = `
+            SELECT user_id, username
+            FROM users
+            WHERE role = 'Leader'
+            ORDER BY username;
+        `;
+
+        const result = await pool.query(query);
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Instructors retrieved successfully',
+            data: result.rows
+        });
+    } catch (err) {
+        console.error('Error fetching instructors:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+
+
+
+
+
+
+
+app.put('/api/members/:id', async (req, res) => {
+    const memberId = parseInt(req.params.id, 10);
+    const {
+        sir_name,
+        middle_name,
+        last_name,
+        date_of_birth,
+        contact_info,
+        gender,
+        location,
+        county_of_origin,
+        occupation_status,
+        married_status,
+        is_visiting,
+        fellowship_ministries,
+        service_ministries,
+        is_full_member,
+        baptized,
+        conversion_date,
+        discipleship_class_id,
+        completed_class,
+        next_of_kin,
+        volunteering,
+    } = req.body;
+
+    try {
+        // Step 1: Check if the member exists
+        const memberCheck = await pool.query('SELECT * FROM members WHERE member_id = $1', [memberId]);
+        if (memberCheck.rowCount === 0) {
+            return res.status(404).json({ error: 'Member not found' });
+        }
+
+        // Step 2: Update the members table
+        const updateMemberQuery = `
+            UPDATE members
+            SET 
+                name = $1,
+                contact_info = $2,
+                date_of_birth = $3,
+                married_status = $4,
+                occupation_status = $5,
+                fellowship_ministries = $6,
+                service_ministries = $7,
+                baptized = $8,
+                conversion_date = $9,
+                is_full_member = $10,
+                is_visiting = $11,
+                location = $12,
+                county_of_origin = $13,
+                gender = $14,
+                discipleship_class_id = $15,
+                completed_class = $16,
+                membership_date = NOW()
+            WHERE member_id = $17
+            RETURNING *;
+        `;
+
+        const updateMemberValues = [
+            `${sir_name} ${middle_name} ${last_name}`.trim(),
+            contact_info,
+            date_of_birth,
+            married_status,
+            occupation_status,
+            fellowship_ministries,
+            service_ministries,
+            !!baptized, // Convert to boolean
+            conversion_date,
+            !!is_full_member, // Convert to boolean
+            !!is_visiting, // Convert to boolean
+            location,
+            county_of_origin,
+            gender,
+            discipleship_class_id,
+            completed_class === true, // Ensure boolean value
+            memberId,
+        ];
+
+        const updatedMemberResult = await pool.query(updateMemberQuery, updateMemberValues);
+        const updatedMember = updatedMemberResult.rows[0];
+
+        // Step 3: Update the next_of_kin table (if provided)
+        if (next_of_kin && next_of_kin.first_name && next_of_kin.last_name && next_of_kin.contact_info) {
+            // Check if next_of_kin exists for this member
+            const nextOfKinCheck = await pool.query('SELECT * FROM next_of_kin WHERE member_id = $1', [memberId]);
+
+            if (nextOfKinCheck.rowCount > 0) {
+                // Update existing next_of_kin
+                const updateNextOfKinQuery = `
+                    UPDATE next_of_kin
+                    SET 
+                        first_name = $1,
+                        last_name = $2,
+                        contact_info = $3
+                    WHERE member_id = $4
+                    RETURNING *;
+                `;
+                const updateNextOfKinValues = [
+                    next_of_kin.first_name,
+                    next_of_kin.last_name,
+                    next_of_kin.contact_info,
+                    memberId,
+                ];
+
+                await pool.query(updateNextOfKinQuery, updateNextOfKinValues);
+            } else {
+                // Insert new next_of_kin
+                const insertNextOfKinQuery = `
+                    INSERT INTO next_of_kin (member_id, first_name, last_name, contact_info)
+                    VALUES ($1, $2, $3, $4);
+                `;
+                const insertNextOfKinValues = [
+                    memberId,
+                    next_of_kin.first_name,
+                    next_of_kin.last_name,
+                    next_of_kin.contact_info,
+                ];
+
+                await pool.query(insertNextOfKinQuery, insertNextOfKinValues);
+            }
+        }
+
+        // Step 4: Update the volunteers table (if provided)
+        if (volunteering && volunteering.role) {
+            // Check if volunteering record exists for this member
+            const volunteerCheck = await pool.query('SELECT * FROM volunteers WHERE member_id = $1', [memberId]);
+
+            if (volunteerCheck.rowCount > 0) {
+                // Update existing volunteer
+                const updateVolunteerQuery = `
+                    UPDATE volunteers
+                    SET role = $1
+                    WHERE member_id = $2
+                    RETURNING *;
+                `;
+                const updateVolunteerValues = [
+                    volunteering.role,
+                    memberId,
+                ];
+
+                await pool.query(updateVolunteerQuery, updateVolunteerValues);
+            } else {
+                // Insert new volunteer
+                const nextVolunteerIdResult = await pool.query('SELECT COALESCE(MAX(volunteer_id), 0) + 1 AS next_id FROM volunteers');
+                const nextVolunteerId = nextVolunteerIdResult.rows[0].next_id;
+
+                const insertVolunteerQuery = `
+                    INSERT INTO volunteers (volunteer_id, member_id, role)
+                    VALUES ($1, $2, $3);
+                `;
+                const insertVolunteerValues = [
+                    nextVolunteerId,
+                    memberId,
+                    volunteering.role,
+                ];
+
+                await pool.query(insertVolunteerQuery, insertVolunteerValues);
+            }
+        }
+            // Respond with the updated member details
+            res.status(200).json({
+                message: 'Member updated successfully',
+                member: updatedMember,
+            });
+    
+        } catch (error) {
+            console.error('Error updating member:', error.message);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+});
+
+app.get('/api/members/:id', async (req, res) => {
+    const memberId = req.params.id;
+    
+    try {
+      // Fetch member data
+      const memberQuery = 'SELECT * FROM members WHERE member_id = $1';
+      const memberResult = await pool.query(memberQuery, [memberId]);
+  
+      if (memberResult.rowCount === 0) {
+        return res.status(404).json({ error: 'Member not found' });
+      }
+  
+      const member = memberResult.rows[0];
+  
+      // Fetch next of kin data from the next_of_kin table
+      const nextOfKinQuery = 'SELECT * FROM next_of_kin WHERE member_id = $1';
+      const nextOfKinResult = await pool.query(nextOfKinQuery, [memberId]);
+  
+      const nextOfKin = nextOfKinResult.rows[0] || {}; // Use the first result or an empty object if none found
+  
+      // Combine member and next of kin data
+      const responseData = {
+        ...member,
+        nextOfKinFirstName: nextOfKin.first_name || '',
+        nextOfKinLastName: nextOfKin.last_name || '',
+        nextOfKinContactInfo: nextOfKin.contact_info || '',
+      };
+  
+      res.json(responseData); // Send the combined data back to the frontend
+    } catch (error) {
+      console.error('Error fetching member data:', error.message);
+      res.status(500).json({ error: 'Error fetching member details' });
+    }
+  });    
+
 
 
 // Start the server
