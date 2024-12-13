@@ -171,7 +171,7 @@ export default function SideBar({ onLogout, collapsed, onToggle }) { // Accept '
                 active={checkActive("/addMember")}
                 icon={<ArrowRightOutlinedIcon />}
               >
-                {!collapsed && "Add Member"}
+                {!collapsed && "Member Access"}
               </MenuItem>
               <MenuItem
                 component={<NavLink to="/baptism" />}
