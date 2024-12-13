@@ -1754,7 +1754,7 @@ app.get('/api/volunteers/total-count', async (req, res) => {
 });
 
 // Login API with Role Validation
-app.post('/api/users/login', async (req, res) => {
+app.post('/api/users/login', cors(), async (req, res) => {
     const { email, password } = req.body;
 
     // Validate input
