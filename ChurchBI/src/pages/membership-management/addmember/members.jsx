@@ -42,7 +42,7 @@ export default function MemberManagement() {
   const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   // Fetch members function
-  const fetchMembers = async (offset = 0, limitVal = 20, search = '') => {
+  const fetchMembers = async (offset = currentOffset, limitVal = 20, search = '') => {
     try {
       const response = await axios.get('https://statistics-production-032c.up.railway.app/api/members', {
         params: {
@@ -70,12 +70,10 @@ export default function MemberManagement() {
       // Append new members to the existing list
       setMembers(prev => [...prev, ...processedMembers])
       setTotalMembers(total)
-      setCurrentOffset(prev => prev + fetchedMembers.length)
+      setCurrentOffset(offset + limitVal)
 
       // Determine if there's more data to load
-      if (currentOffset + fetchedMembers.length >= total) {
-        setHasMore(false)
-      }
+      setHasMore(offset + fetchedMembers.length < total);
     } catch (error) {
       console.error('Error fetching members:', error)
     } finally {
