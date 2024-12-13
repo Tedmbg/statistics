@@ -372,7 +372,7 @@ app.get('/api/members', async (req, res) => {
         }
 
         // Add ORDER BY, LIMIT, OFFSET
-        query += ' ORDER BY name ASC LIMIT $' + (values.length + 1) + ' OFFSET $' + (values.length + 2);
+        query += ' ORDER BY member_id ASC LIMIT $' + (values.length + 1) + ' OFFSET $' + (values.length + 2);
         values.push(limitVal);
         values.push(offsetVal);
 
