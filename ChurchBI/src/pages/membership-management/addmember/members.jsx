@@ -42,47 +42,50 @@ export default function MemberManagement() {
   const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   // Fetch members function
-  const fetchMembers = async (offset = 0, limitVal = 20, search = '') => {
+  const fetchMembers = async (lastMemberId = null, limitVal = 20, search = '') => {
     try {
-      const response = await axios.get('https://statistics-production-032c.up.railway.app/api/members', {
-        params: {
-          limit: limitVal,
-          offset: offset,
-          search: search.trim() !== '' ? search : undefined,
-        },
-      })
-      console.log("API Response:", response.data)
+        const response = await axios.get('https://statistics-production-032c.up.railway.app/api/members', {
+            params: {
+                limit: limitVal,
+                lastMemberId: lastMemberId || undefined,
+                search: search.trim() !== '' ? search : undefined,
+            },
+        });
 
-      const { members: fetchedMembers, total } = response.data
+        console.log("API Response:", response.data);
 
-      // Process members to split the name
-      const processedMembers = fetchedMembers.map(member => {
-        const nameParts = member.name.split(' ')
-        return {
-          id: member.member_id, // Ensure correct mapping of the ID
-          firstName: nameParts[0] || '',
-          middleName: nameParts[1] || '',
-          lastName: nameParts.slice(2).join(' ') || '',
-          ...member,
+        const { members: fetchedMembers, hasMore } = response.data;
+
+        // Process members to split the name
+        const processedMembers = fetchedMembers.map(member => {
+            const nameParts = member.name.split(' ');
+            return {
+                id: member.member_id,
+                firstName: nameParts[0] || '',
+                middleName: nameParts[1] || '',
+                lastName: nameParts.slice(2).join(' ') || '',
+                ...member,
+            };
+        });
+
+        // Append new members to the existing list
+        setMembers(prev => [...prev, ...processedMembers]);
+
+        // Update the lastMemberId to the ID of the last fetched member
+        if (fetchedMembers.length > 0) {
+            setCurrentOffset(fetchedMembers[fetchedMembers.length - 1].member_id);
         }
-      })
 
-      // Append new members to the existing list
-      setMembers(prev => [...prev, ...processedMembers])
-      setTotalMembers(total)
-      setCurrentOffset(prev => prev + fetchedMembers.length)
-
-      // Determine if there's more data to load
-      if (currentOffset + fetchedMembers.length >= total) {
-        setHasMore(false)
-      }
+        // Update hasMore based on the API response
+        setHasMore(hasMore);
     } catch (error) {
-      console.error('Error fetching members:', error)
+        console.error('Error fetching members:', error);
     } finally {
-      setIsInitialLoading(false)
-      setIsLoadingMore(false)
+        setIsInitialLoading(false);
+        setIsLoadingMore(false);
     }
   }
+
 
   // Initial fetch and when searchTerm changes
   useEffect(() => {
