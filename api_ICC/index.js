@@ -2075,7 +2075,7 @@ app.put('/api/users/update', authenticateAdmin, async (req, res) => {
 });
 
 // Get Instructors API
-app.get('/api/instructors', authenticateAdmin, async (req, res) => {
+app.get('/api/instructors', async (req, res) => {
     try {
         // Query to fetch users with the role 'Leader'
         const query = `
