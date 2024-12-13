@@ -398,6 +398,47 @@ app.get('/api/members', async (req, res) => {
 });
 
 
+app.get('/api/members2', async (req, res) => {
+    const { limit, lastMemberId } = req.query;
+
+    const limitVal = parseInt(limit, 10) || 20; // Default to 20
+    const cursor = lastMemberId ? parseInt(lastMemberId, 10) : null; // Use lastMemberId for cursor-based pagination
+
+    try {
+        let query = `
+            SELECT *
+            FROM members
+            WHERE is_visiting = FALSE
+        `;
+        const params = [];
+
+        // Add cursor-based pagination logic
+        if (cursor) {
+            query += ` AND member_id > $1`;
+            params.push(cursor);
+        }
+
+        query += `
+            ORDER BY member_id ASC
+            LIMIT $${params.length + 1}
+        `;
+        params.push(limitVal);
+
+        console.log('Executing query:', query, params); // Log the query and parameters
+
+        const result = await pool.query(query, params);
+
+        res.json({
+            members: result.rows,
+            hasMore: result.rows.length === limitVal, // Indicate if more rows are available
+        });
+    } catch (error) {
+        console.error('Error fetching members:', error.message);
+        res.status(500).json({ message: 'Error fetching members' });
+    }
+});
+
+
 //Get all members count & allow yearmonth filter
 app.get('/api/members/count', async (req, res) => {
     const { year, month } = req.query;
