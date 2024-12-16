@@ -1925,70 +1925,89 @@ app.post('/api/users/create/test', async (req, res) => {
 });
 
 
+const { format } = require('date-fns'); // Import date-fns
+
 app.get('/api/members/:id', async (req, res) => {
-    const memberId = req.params.id;
-  
-    try {
-      // Fetch member data
-      const memberQuery = 'SELECT * FROM members WHERE member_id = $1';
-      const memberResult = await pool.query(memberQuery, [memberId]);
-  
-      if (memberResult.rowCount === 0) {
-        return res.status(404).json({ error: 'Member not found' });
-      }
-  
-      const member = memberResult.rows[0];
-  
-      // Fetch next of kin data from the next_of_kin table
-      const nextOfKinQuery = 'SELECT * FROM next_of_kin WHERE member_id = $1';
-      const nextOfKinResult = await pool.query(nextOfKinQuery, [memberId]);
-  
-      const nextOfKin = nextOfKinResult.rows[0] || {}; // Use the first result or an empty object if none found
-  
-      // Fetch volunteering data by joining volunteers and ministries tables
-      const volunteeringQuery = `
-        SELECT m.ministry_name, m.type AS ministry_type, v.role
-        FROM volunteers v
-        JOIN ministries m ON v.ministry_id = m.ministry_id
-        WHERE v.member_id = $1
-      `;
-      const volunteeringResult = await pool.query(volunteeringQuery, [memberId]);
-  
-      // Initialize volunteering fields
-      let fellowshipMinistryName = '';
-      let fellowshipRole = '';
-      let serviceMinistryName = '';
-      let serviceRole = '';
-  
-      // Map the volunteering data to individual fields
-      volunteeringResult.rows.forEach((volunteer) => {
-        if (volunteer.ministry_type === 'Fellowship') {
-          fellowshipMinistryName = volunteer.ministry_name;
-          fellowshipRole = volunteer.role;
-        } else if (volunteer.ministry_type === 'Service') {
-          serviceMinistryName = volunteer.ministry_name;
-          serviceRole = volunteer.role;
-        }
-      });
-  
-      // Combine member, next of kin, and volunteering data
-      const responseData = {
-        ...member,
-        nextOfKinFirstName: nextOfKin.first_name || '',
-        nextOfKinLastName: nextOfKin.last_name || '',
-        nextOfKinContactInfo: nextOfKin.contact_info || '',
-        fellowshipMinistryName,
-        fellowshipRole,
-        serviceMinistryName,
-        serviceRole,
-      };
-  
-      res.json(responseData); // Send the combined data back to the frontend
-    } catch (error) {
-      console.error('Error fetching member data:', error.message);
-      res.status(500).json({ error: 'Error fetching member details' });
+  const memberId = req.params.id;
+
+  try {
+    // Fetch member data
+    const memberQuery = 'SELECT * FROM members WHERE member_id = $1';
+    const memberResult = await pool.query(memberQuery, [memberId]);
+
+    if (memberResult.rowCount === 0) {
+      return res.status(404).json({ error: 'Member not found' });
     }
-  });
+
+    const member = memberResult.rows[0];
+
+    // Fetch next of kin data from the next_of_kin table
+    const nextOfKinQuery = 'SELECT * FROM next_of_kin WHERE member_id = $1';
+    const nextOfKinResult = await pool.query(nextOfKinQuery, [memberId]);
+
+    const nextOfKin = nextOfKinResult.rows[0] || {}; // Use the first result or an empty object if none found
+
+    // Fetch volunteering data by joining volunteers and ministries tables
+    const volunteeringQuery = `
+      SELECT m.ministry_name, m.type AS ministry_type, v.role
+      FROM volunteers v
+      JOIN ministries m ON v.ministry_id = m.ministry_id
+      WHERE v.member_id = $1
+    `;
+    const volunteeringResult = await pool.query(volunteeringQuery, [memberId]);
+
+    // Initialize volunteering fields
+    let fellowshipMinistryName = '';
+    let fellowshipRole = '';
+    let serviceMinistryName = '';
+    let serviceRole = '';
+
+    // Map the volunteering data to individual fields
+    volunteeringResult.rows.forEach((volunteer) => {
+      if (volunteer.ministry_type === 'Fellowship') {
+        fellowshipMinistryName = volunteer.ministry_name;
+        fellowshipRole = volunteer.role;
+      } else if (volunteer.ministry_type === 'Service') {
+        serviceMinistryName = volunteer.ministry_name;
+        serviceRole = volunteer.role;
+      }
+    });
+
+    // Format date_of_birth as 'YYYY-MM-DD' using date-fns
+    let formattedDob = '';
+    if (member.date_of_birth) {
+      const dobDate = new Date(member.date_of_birth);
+      if (!isNaN(dobDate)) {
+        formattedDob = format(dobDate, 'yyyy-MM-dd'); // '1995-06-20'
+      } else {
+        console.warn(`Invalid date_of_birth format for member ID ${memberId}`);
+      }
+    }
+
+    // Combine member, next of kin, and volunteering data
+    const responseData = {
+      ...member,
+      nextOfKinFirstName: nextOfKin.first_name || '',
+      nextOfKinLastName: nextOfKin.last_name || '',
+      nextOfKinContactInfo: nextOfKin.contact_info || '',
+      fellowshipMinistryName,
+      fellowshipRole,
+      serviceMinistryName,
+      serviceRole,
+      date_of_birth: formattedDob, // Override with formatted DOB
+    };
+
+    // Log for verification
+    console.log('Formatted DOB:', formattedDob);
+    console.log('Response Data:', responseData);
+
+    res.json(responseData); // Send the combined data back to the frontend
+  } catch (error) {
+    console.error('Error fetching member data:', error.message);
+    res.status(500).json({ error: 'Error fetching member details' });
+  }
+});
+
   
 
 
