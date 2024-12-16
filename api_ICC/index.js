@@ -6,8 +6,6 @@ const cron = require('node-cron');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const morgan = require('morgan');
-const { format } = require('date-fns'); // Import date-fns
-
 
 
 // Load environment variables
@@ -23,7 +21,6 @@ const app = express();
 app.use(cors({
     origin: ['http://localhost:5173', 'https://statistics-production-032c.up.railway.app'], 
     methods: 'GET,POST,PUT,DELETE', 
-    credentials: true
 }));
 
 // Middleware to parse JSON
@@ -100,8 +97,6 @@ const authenticateAdmin = async (req, res, next) => {
 app.get('/', (req, res) => {
   res.send('API is working!');
 });
-
-app.options('*', cors());
 
 // GET /api/members - Fetch all members with related next of kin and volunteering details
 // app.get('/api/members', async (req, res) => {
@@ -398,47 +393,6 @@ app.get('/api/members', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Error fetching members' });
-    }
-});
-
-
-app.get('/api/members2', async (req, res) => {
-    const { limit, lastMemberId } = req.query;
-
-    const limitVal = parseInt(limit, 10) || 20; // Default to 20
-    const cursor = lastMemberId ? parseInt(lastMemberId, 10) : null; // Use lastMemberId for cursor-based pagination
-
-    try {
-        let query = `
-            SELECT *
-            FROM members
-            WHERE is_visiting = FALSE
-        `;
-        const params = [];
-
-        // Add cursor-based pagination logic
-        if (cursor) {
-            query += ` AND member_id > $1`;
-            params.push(cursor);
-        }
-
-        query += `
-            ORDER BY member_id ASC
-            LIMIT $${params.length + 1}
-        `;
-        params.push(limitVal);
-
-        console.log('Executing query:', query, params); // Log the query and parameters
-
-        const result = await pool.query(query, params);
-
-        res.json({
-            members: result.rows,
-            hasMore: result.rows.length === limitVal, // Indicate if more rows are available
-        });
-    } catch (error) {
-        console.error('Error fetching members:', error.message);
         res.status(500).json({ message: 'Error fetching members' });
     }
 });
@@ -1759,7 +1713,7 @@ app.get('/api/volunteers/total-count', async (req, res) => {
 });
 
 // Login API with Role Validation
-app.post('/api/users/login', cors(), async (req, res) => {
+app.post('/api/users/login', async (req, res) => {
     const { email, password } = req.body;
 
     // Validate input
@@ -1783,7 +1737,7 @@ app.post('/api/users/login', cors(), async (req, res) => {
         const user = userResult.rows[0];
 
         // Check if the user has a valid role
-        const allowedRoles = ['Admin', 'Pastor', 'Leader', 'usher', 'instructor' ];
+        const allowedRoles = ['Admin', 'Pastor', 'Leader'];
         if (!allowedRoles.includes(user.role)) {
             return res.status(403).json({ status: 'error', message: 'Access denied. Invalid role.' });
         }
@@ -1829,7 +1783,7 @@ app.post('/api/users/create', authenticateAdmin, async (req, res) => {
     }
 
     // Validate role
-    const allowedRoles = ['Admin', 'Pastor', 'Leader', 'usher', 'instructor'];
+    const allowedRoles = ['Admin', 'Pastor', 'Leader'];
     if (!allowedRoles.includes(role)) {
         return res.status(403).json({ status: 'error', message: 'Invalid role specified' });
     }
@@ -1927,90 +1881,40 @@ app.post('/api/users/create/test', async (req, res) => {
 });
 
 
-
-
 app.get('/api/members/:id', async (req, res) => {
-  const memberId = req.params.id;
-
-  try {
-    // Fetch member data
-    const memberQuery = 'SELECT * FROM members WHERE member_id = $1';
-    const memberResult = await pool.query(memberQuery, [memberId]);
-
-    if (memberResult.rowCount === 0) {
-      return res.status(404).json({ error: 'Member not found' });
-    }
-
-    const member = memberResult.rows[0];
-
-    // Fetch next of kin data from the next_of_kin table
-    const nextOfKinQuery = 'SELECT * FROM next_of_kin WHERE member_id = $1';
-    const nextOfKinResult = await pool.query(nextOfKinQuery, [memberId]);
-
-    const nextOfKin = nextOfKinResult.rows[0] || {}; // Use the first result or an empty object if none found
-
-    // Fetch volunteering data by joining volunteers and ministries tables
-    const volunteeringQuery = `
-      SELECT m.ministry_name, m.type AS ministry_type, v.role
-      FROM volunteers v
-      JOIN ministries m ON v.ministry_id = m.ministry_id
-      WHERE v.member_id = $1
-    `;
-    const volunteeringResult = await pool.query(volunteeringQuery, [memberId]);
-
-    // Initialize volunteering fields
-    let fellowshipMinistryName = '';
-    let fellowshipRole = '';
-    let serviceMinistryName = '';
-    let serviceRole = '';
-
-    // Map the volunteering data to individual fields
-    volunteeringResult.rows.forEach((volunteer) => {
-      if (volunteer.ministry_type === 'Fellowship') {
-        fellowshipMinistryName = volunteer.ministry_name;
-        fellowshipRole = volunteer.role;
-      } else if (volunteer.ministry_type === 'Service') {
-        serviceMinistryName = volunteer.ministry_name;
-        serviceRole = volunteer.role;
-      }
-    });
-
-    // Format date_of_birth as 'YYYY-MM-DD' using date-fns
-    let formattedDob = '';
-    if (member.date_of_birth) {
-      const dobDate = new Date(member.date_of_birth);
-      if (!isNaN(dobDate)) {
-        formattedDob = format(dobDate, 'yyyy-MM-dd'); // '1995-06-20'
-      } else {
-        console.warn(`Invalid date_of_birth format for member ID ${memberId}`);
-      }
-    }
-
-    // Combine member, next of kin, and volunteering data
-    const responseData = {
-      ...member,
-      nextOfKinFirstName: nextOfKin.first_name || '',
-      nextOfKinLastName: nextOfKin.last_name || '',
-      nextOfKinContactInfo: nextOfKin.contact_info || '',
-      fellowshipMinistryName,
-      fellowshipRole,
-      serviceMinistryName,
-      serviceRole,
-      date_of_birth: formattedDob, // Override with formatted DOB
-    };
-
-    // Log for verification
-    console.log('Formatted DOB:', formattedDob);
-    console.log('Response Data:', responseData);
-
-    res.json(responseData); // Send the combined data back to the frontend
-  } catch (error) {
-    console.error('Error fetching member data:', error.message);
-    res.status(500).json({ error: 'Error fetching member details' });
-  }
-});
-
+    const memberId = req.params.id;
+    
+    try {
+      // Fetch member data
+      const memberQuery = 'SELECT * FROM members WHERE member_id = $1';
+      const memberResult = await pool.query(memberQuery, [memberId]);
   
+      if (memberResult.rowCount === 0) {
+        return res.status(404).json({ error: 'Member not found' });
+      }
+  
+      const member = memberResult.rows[0];
+  
+      // Fetch next of kin data from the next_of_kin table
+      const nextOfKinQuery = 'SELECT * FROM next_of_kin WHERE member_id = $1';
+      const nextOfKinResult = await pool.query(nextOfKinQuery, [memberId]);
+  
+      const nextOfKin = nextOfKinResult.rows[0] || {}; // Use the first result or an empty object if none found
+  
+      // Combine member and next of kin data
+      const responseData = {
+        ...member,
+        nextOfKinFirstName: nextOfKin.first_name || '',
+        nextOfKinLastName: nextOfKin.last_name || '',
+        nextOfKinContactInfo: nextOfKin.contact_info || '',
+      };
+  
+      res.json(responseData); // Send the combined data back to the frontend
+    } catch (error) {
+      console.error('Error fetching member data:', error.message);
+      res.status(500).json({ error: 'Error fetching member details' });
+    }
+  });
 
 
 // Token Validation API
@@ -2074,7 +1978,6 @@ app.get('/api/users/role', (req, res) => {
 // Update User Login (Password Reset) API using Email
 app.put('/api/users/update', authenticateAdmin, async (req, res) => {
     const { email, newPassword } = req.body;
-    res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
 
     // Validate input
     if (!email || !newPassword) {
@@ -2127,7 +2030,7 @@ app.put('/api/users/update', authenticateAdmin, async (req, res) => {
 });
 
 // Get Instructors API
-app.get('/api/instructors', async (req, res) => {
+app.get('/api/instructors', authenticateAdmin, async (req, res) => {
     try {
         // Query to fetch users with the role 'Leader'
         const query = `
@@ -2150,168 +2053,7 @@ app.get('/api/instructors', async (req, res) => {
     }
 });
 
-// Fellowship total member count 
-app.get('/api/members-fellowship/total-count', async (req, res) => {
-    const { year } = req.query; // Optional year filter
 
-    try {
-        const query = `
-            SELECT
-                COUNT(*)::INTEGER AS total_members, -- Total count of members
-                COALESCE(json_agg(monthly_count ORDER BY monthly_count.month)::jsonb, '[]'::jsonb) AS monthly_breakdown
-            FROM (
-                SELECT
-                    TO_CHAR(m.membership_date, 'YYYY-MM') AS month, -- Month format as YYYY-MM
-                    COUNT(*)::INTEGER AS count -- Count of members per month
-                FROM
-                    members m
-                WHERE
-                    m.is_visiting = FALSE -- Exclude visiting members
-                    ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''} -- Optional year filter
-                GROUP BY
-                    TO_CHAR(m.membership_date, 'YYYY-MM')
-            ) AS monthly_count;
-        `;
-
-        const result = await pool.query(query);
-
-        res.json({
-            status: 'success',
-            data: {
-                total_members: result.rows[0].total_members,
-                monthly_breakdown: result.rows[0].monthly_breakdown,
-                year: year || 'All Years', // Include year or indicate "All Years"
-            },
-        });
-    } catch (err) {
-        console.error('Error fetching member count:', err.message);
-        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
-    }
-});
-
-// Felowship-minstries member count per ministry
-app.get('/api/fellowship-ministries', async (req, res) => {
-    const { year } = req.query; //  the year query parameters
-
-    try {
-        const query = `
-            SELECT
-                min.ministry_id,
-                min.ministry_name,
-                min.leader_name AS instructor,
-                COUNT(
-                    CASE 
-                        WHEN m.is_visiting = FALSE 
-                             AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 
-                             ${year ? `AND EXTRACT(YEAR FROM mm.assigned_at) = ${year}` : ''}
-                        THEN m.member_id
-                    END
-                )::INTEGER AS total_members
-            FROM
-                ministries min
-            LEFT JOIN member_ministries mm ON min.ministry_id = mm.ministry_id
-            LEFT JOIN members m ON mm.member_id = m.member_id
-            WHERE
-                min.type = 'Fellowship' -- Only fellowship ministries
-            GROUP BY
-                min.ministry_id, min.ministry_name, min.leader_name
-            ORDER BY
-                min.ministry_id;
-        `;
-
-        const result = await pool.query(query);
-        res.json({
-            status: 'success',
-            data: result.rows,
-            year: year || 'All Years', // Include year in the response
-        });
-    } catch (err) {
-        console.error('Error fetching fellowship ministries:', err.message);
-        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
-    }
-});
-
-// Felloswship age-dritribution 
-app.get('/api/fellowship-ministries/age-distribution', async (req, res) => {
-    const { year } = req.query; //  the year  query parameters
-
-    try {
-        const query = `
-            SELECT
-                min.ministry_name,
-                CASE
-                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
-                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
-                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 36 AND 49 THEN '36-49'
-                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 50 AND 64 THEN '50-64'
-                    WHEN DATE_PART('year', AGE(m.date_of_birth)) >= 65 THEN '65+'
-                END AS age_range,
-                COUNT(m.member_id)::INTEGER AS total
-            FROM
-                members m
-            JOIN member_ministries mm ON m.member_id = mm.member_id
-            JOIN ministries min ON mm.ministry_id = min.ministry_id
-            WHERE
-                min.type = 'Fellowship' -- Only fellowship ministries
-                AND m.is_visiting = FALSE -- Exclude visiting members
-                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Include only members aged 18+
-                ${year ? `AND EXTRACT(YEAR FROM mm.assigned_at) = ${year}` : ''} -- Optional year filter
-            GROUP BY
-                min.ministry_name, age_range
-            ORDER BY
-                min.ministry_name, age_range;
-        `;
-
-        const result = await pool.query(query);
-        res.json({
-            status: 'success',
-            data: result.rows,
-            year: year || 'All Years', // Include year in the response
-        });
-    } catch (err) {
-        console.error('Error fetching age distribution:', err.message);
-        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
-    }
-});
-
-// Fellowship ministries work status 
-app.get('/api/fellowship-ministries/work-status', async (req, res) => {
-    const { year } = req.query; // the year query parameters
-
-    try {
-        const query = `
-            SELECT
-                min.ministry_name,
-                m.occupation_status,
-                COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::INTEGER AS male_count,
-                COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::INTEGER AS female_count,
-                (COUNT(CASE WHEN m.gender = 'Male' THEN 1 END) + COUNT(CASE WHEN m.gender = 'Female' THEN 1 END))::INTEGER AS total_count
-            FROM
-                members m
-            JOIN member_ministries mm ON m.member_id = mm.member_id
-            JOIN ministries min ON mm.ministry_id = min.ministry_id
-            WHERE
-                min.type = 'Fellowship' -- Only fellowship ministries
-                AND m.is_visiting = FALSE -- Exclude visiting members
-                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Include only members aged 18+
-                ${year ? `AND EXTRACT(YEAR FROM mm.assigned_at) = ${year}` : ''} -- Optional year filter
-            GROUP BY
-                min.ministry_name, m.occupation_status
-            ORDER BY
-                total_count DESC; -- Use total_count for ordering
-        `;
-
-        const result = await pool.query(query);
-        res.json({
-            status: 'success',
-            data: result.rows,
-            year: year || 'All Years', // Include year in the response
-        });
-    } catch (err) {
-        console.error('Error fetching work status:', err.message);
-        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
-    }
-});
 
 
 
@@ -2487,32 +2229,43 @@ app.put('/api/members/:id', async (req, res) => {
             console.error('Error updating member:', error.message);
             res.status(500).json({ error: 'Internal Server Error' });
         }
-});  
+});
 
-// DELETE API Endpoint
-app.delete('/api/members/:id', async (req, res) => {
-    const { id } = req.params;
-  
+app.get('/api/members/:id', async (req, res) => {
+    const memberId = req.params.id;
+    
     try {
-      // Validate the ID
-      if (!id) {
-        return res.status(400).json({ error: "Member ID is required" });
+      // Fetch member data
+      const memberQuery = 'SELECT * FROM members WHERE member_id = $1';
+      const memberResult = await pool.query(memberQuery, [memberId]);
+  
+      if (memberResult.rowCount === 0) {
+        return res.status(404).json({ error: 'Member not found' });
       }
   
-      // Replace with your database logic to delete a member
-      const deleteResult = await pool.query('DELETE FROM members WHERE member_id = $1', [id]);
+      const member = memberResult.rows[0];
   
-      if (deleteResult.rowCount === 0) {
-        return res.status(404).json({ error: "Member not found" });
-      }
+      // Fetch next of kin data from the next_of_kin table
+      const nextOfKinQuery = 'SELECT * FROM next_of_kin WHERE member_id = $1';
+      const nextOfKinResult = await pool.query(nextOfKinQuery, [memberId]);
   
-      res.status(200).json({ message: "Member deleted successfully" });
+      const nextOfKin = nextOfKinResult.rows[0] || {}; // Use the first result or an empty object if none found
+  
+      // Combine member and next of kin data
+      const responseData = {
+        ...member,
+        nextOfKinFirstName: nextOfKin.first_name || '',
+        nextOfKinLastName: nextOfKin.last_name || '',
+        nextOfKinContactInfo: nextOfKin.contact_info || '',
+      };
+  
+      res.json(responseData); // Send the combined data back to the frontend
     } catch (error) {
-      console.error("Error deleting member:", error);
-      res.status(500).json({ error: "Internal server error" });
+      console.error('Error fetching member data:', error.message);
+      res.status(500).json({ error: 'Error fetching member details' });
     }
-  });
-  
+  });    
+
 
 
 // Start the server
