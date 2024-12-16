@@ -2094,10 +2094,118 @@ app.get('/api/fellowship-ministries/gender-distribution', async (req, res) => {
     }
 });
 
+// Fellowship Gender-ratio 
+
+app.get('/api/fellowship-ministries/gender-distribution', async (req, res) => {
+    const { year } = req.query; // Optional year filter
+
+    try {
+        const query = `
+            SELECT
+                COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::INTEGER AS total_male,
+                COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::INTEGER AS total_female,
+                COUNT(*)::INTEGER AS total_members,
+                ROUND(
+                    CASE 
+                        WHEN COUNT(*) > 0 THEN COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::NUMERIC / COUNT(*) * 100
+                        ELSE 0
+                    END, 2
+                ) AS male_percentage,
+                ROUND(
+                    CASE 
+                        WHEN COUNT(*) > 0 THEN COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::NUMERIC / COUNT(*) * 100
+                        ELSE 0
+                    END, 2
+                ) AS female_percentage
+            FROM
+                members m
+            JOIN member_ministries mm ON m.member_id = mm.member_id
+            JOIN ministries min ON mm.ministry_id = min.ministry_id
+            WHERE
+                min.type = 'Fellowship' -- Only fellowship ministries
+                AND m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Only include members aged 18+
+                ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''} -- Optional year filter
+        `;
+
+        const result = await pool.query(query);
+
+        res.json({
+            status: 'success',
+            data: {
+                total_male: result.rows[0].total_male,
+                total_female: result.rows[0].total_female,
+                male_percentage: result.rows[0].male_percentage,
+                female_percentage: result.rows[0].female_percentage,
+                year: year || 'All Years', // Include year in the response
+            },
+        });
+    } catch (err) {
+        console.error('Error fetching gender distribution:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
 
 
+//Fellowship Average growth 
+app.get('/api/fellowship-ministries/overall-gender-ratio', async (req, res) => {
+    const { year } = req.query; // Optional year filter
 
+    try {
+        const query = `
+            SELECT
+                COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::INTEGER AS total_male,
+                COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::INTEGER AS total_female,
+                COUNT(*)::INTEGER AS total_members,
+                ROUND(
+                    CASE 
+                        WHEN COUNT(*) > 0 THEN COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::NUMERIC / COUNT(*) * 100
+                        ELSE 0
+                    END, 2
+                ) AS male_percentage,
+                ROUND(
+                    CASE 
+                        WHEN COUNT(*) > 0 THEN COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::NUMERIC / COUNT(*) * 100
+                        ELSE 0
+                    END, 2
+                ) AS female_percentage,
+                ROUND(
+                    CASE 
+                        WHEN COUNT(CASE WHEN m.gender = 'Female' THEN 1 END) > 0 THEN
+                            COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::NUMERIC /
+                            COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)
+                        ELSE NULL
+                    END, 2
+                ) AS gender_ratio
+            FROM
+                members m
+            JOIN member_ministries mm ON m.member_id = mm.member_id
+            JOIN ministries min ON mm.ministry_id = min.ministry_id
+            WHERE
+                min.type = 'Fellowship' -- Only fellowship ministries
+                AND m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Include only members aged 18+
+                ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''}; -- Optional year filter
+        `;
 
+        const result = await pool.query(query);
+
+        res.json({
+            status: 'success',
+            data: {
+                total_male: result.rows[0].total_male,
+                total_female: result.rows[0].total_female,
+                male_percentage: result.rows[0].male_percentage,
+                female_percentage: result.rows[0].female_percentage,
+                gender_ratio: result.rows[0].gender_ratio,
+                year: year || 'All Years', // Include year in the response
+            },
+        });
+    } catch (err) {
+        console.error('Error fetching gender ratio:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
 
 
 
