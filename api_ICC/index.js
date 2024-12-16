@@ -2500,7 +2500,7 @@ app.delete('/api/members/:id', async (req, res) => {
       }
   
       // Replace with your database logic to delete a member
-      const deleteResult = await pool.query('DELETE FROM members WHERE id = $1', [id]);
+      const deleteResult = await pool.query('DELETE FROM members WHERE member_id = $1', [id]);
   
       if (deleteResult.rowCount === 0) {
         return res.status(404).json({ error: "Member not found" });
