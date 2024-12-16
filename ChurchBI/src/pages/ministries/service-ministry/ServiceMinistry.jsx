@@ -137,7 +137,7 @@ export default function Dashboard() {
                 },
               },
             }}
-            height={700}
+            height={600}
           />
         </Box>
 
