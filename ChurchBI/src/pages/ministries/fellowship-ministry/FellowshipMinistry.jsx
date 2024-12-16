@@ -183,55 +183,68 @@ function FellowshipMinistry() {
 
       {/* Sidebar: Age and Work Status Pie Charts */}
 
-      <Grid container spacing={2}>
-        {/* Left Section - Donut Charts */}
-        <Grid item xs={12} md={8}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <Card sx={{ padding: "1rem", backgroundColor: "#FFF" }}>
-                <Typography variant="h6" textAlign="center">
-                  Age
-                </Typography>
-                <DoughnutC data={ageData} />
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Card sx={{ padding: "1rem", backgroundColor: "#FFF" }}>
-                <Typography variant="h6" textAlign="center">
-                  Work Status
-                </Typography>
-                <DoughnutC data={workStatusData} />
-              </Card>
-            </Grid>
-          </Grid>
-        </Grid>
+      <Grid
+  container
+  spacing={1}
+>
+  {/* Left Section - Donut Charts */}
+  <Grid item xs={12} md={8} > {/* Custom width for Donut Section */}
+    <Grid container spacing={2} >
+      <Grid item xs={12} md={12} sx={{display:"flex", justifyContent:"space-between",gap:"1rem"}}>
+        <Card sx={{ padding: "1rem", backgroundColor: "#FFF", width: "34.75rem"}}> {/* Custom width */}
+          <Typography variant="h6" textAlign="center">
+            Age
+          </Typography>
+          <DoughnutC data={ageData} />
+        </Card>
 
-        {/* Right Section - Service Ministries */}
-        <Grid item xs={12} md={4}>
-          <Card sx={{ padding: "1rem", backgroundColor: "#FFF",height:"26.25rem" }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Fellowship Ministries
-            </Typography>
-            {serviceMinistries.map((ministry, index) => (
-              <Box key={index} display="flex" alignItems="center" mb={2}>
-                <Avatar
-                  sx={{ width: 36, height: 36, bgcolor: "#e0e0e0", mr: 1 }}
-                >
-                  {/* Replace with an image source if available */}
-                </Avatar>
-                <Box>
-                  <Typography variant="body1" fontWeight="bold">
-                    {ministry.name}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    {ministry.leader} - {ministry.label}
-                  </Typography>
-                </Box>
-              </Box>
-            ))}
-          </Card>
-        </Grid>
+        <Card sx={{ padding: "1rem", backgroundColor: "#FFF", width: "34.75rem"}}> {/* Custom width */}
+          <Typography variant="h6" textAlign="center">
+            Work Status
+          </Typography>
+          <DoughnutC data={workStatusData} />
+        </Card>
       </Grid>
+      <Grid item xs={12} md={6}>
+      </Grid>
+    </Grid>
+  </Grid>
+
+  {/* Right Section - Service Ministries */}
+  <Grid item xs={12} md={4} sx={{ display:"flex", justifyContent:"flex-end" }}> {/* Custom width for Fellowship Section */}
+    <Card
+      sx={{
+        padding: "1rem",
+        backgroundColor: "#FFF",
+        height: "26.25rem",
+        width: "28.75rem",
+        overflowY: "auto", // Enable scroll if content exceeds height
+      }}
+    >
+      <Typography variant="h6" fontWeight="bold" gutterBottom>
+        Fellowship Ministries
+      </Typography>
+      {serviceMinistries.map((ministry, index) => (
+        <Box key={index} display="flex" alignItems="center" mb={2}>
+          <Avatar
+            sx={{ width: 36, height: 36, bgcolor: "#e0e0e0", mr: 1 }}
+          >
+            {/* Replace with an image source if available */}
+          </Avatar>
+          <Box>
+            <Typography variant="body1" fontWeight="bold">
+              {ministry.name}
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              {ministry.leader} - {ministry.label}
+            </Typography>
+          </Box>
+        </Box>
+      ))}
+    </Card>
+  </Grid>
+</Grid>
+
     </Box>
   );
 }
