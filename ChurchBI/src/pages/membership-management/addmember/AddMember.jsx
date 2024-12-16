@@ -71,11 +71,19 @@ function formReducer(state, action) {
         ...state,
         ...action.payload,
       };
+
+    case 'UPDATE_IS_VISITING':
+      return {
+        ...state,
+        isVisiting: action.value,
+      };
+
     case 'UPDATE_FIELD':
       return {
         ...state,
         [action.field]: action.value,
       };
+
     case 'UPDATE_NESTED_FIELD':
       return {
         ...state,
@@ -84,6 +92,7 @@ function formReducer(state, action) {
           [action.nestedField]: action.value,
         },
       };
+
     default:
       return state;
   }
@@ -99,22 +108,20 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
   const [serviceMinistries, setServiceMinistries] = useState([]);
   const [discipleshipClasses, setDiscipleshipClasses] = useState([]);
 
-
-
   useEffect(() => {
     // Fetch Fellowship Ministries
     fetch('https://statistics-production-032c.up.railway.app/api/ministries?type=Fellowship')
       .then(response => response.json())
       .then(data => setFellowshipMinistries(data))
       .catch(err => console.error('Error fetching fellowship ministries:', err));
-  
+
     // Fetch Service Ministries
     fetch('https://statistics-production-032c.up.railway.app/api/ministries?type=Service')
       .then(response => response.json())
       .then(data => setServiceMinistries(data))
       .catch(err => console.error('Error fetching service ministries:', err));
   }, []);
-  
+
   useEffect(() => {
     const loadDiscipleshipClasses = async () => {
       try {
@@ -124,21 +131,10 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
         console.error("Failed to load discipleship classes:", error);
       }
     };
-  
+
     loadDiscipleshipClasses();
   }, []);
-  
 
-  useEffect(() => {
-    if (initialData) {
-        dispatch({ type: 'SET_INITIAL_DATA', payload: initialData });
-    } else {
-        dispatch({ type: 'SET_INITIAL_DATA', payload: initialState });
-    }
-}, [initialData]);
-
-
-  // Initialize form data when editing a member
   useEffect(() => {
     if (initialData) {
       const mappedData = {
@@ -157,9 +153,9 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
         baptized: initialData.baptized || false,
         discipleshipClassId: initialData.discipleshipClassId || null,
         completedClass: initialData.completedClass || false,
-        fellowshipCategory: initialData.fellowshipCategory || "",
+        fellowshipMinistryName: initialData.fellowshipMinistryName || "",
         fellowshipRole: initialData.fellowshipRole || "",
-        serviceCategory: initialData.serviceCategory || "",
+        serviceMinistryName: initialData.serviceMinistryName || "",
         serviceRole: initialData.serviceRole || "",
         conversionDate: initialData.conversionDate || '',
         nextOfKin: {
@@ -169,51 +165,42 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
         },
       };
       dispatch({ type: 'SET_INITIAL_DATA', payload: mappedData });
+    } else {
+      // If adding a new member, reset to initialState
+      dispatch({ type: 'SET_INITIAL_DATA', payload: initialState });
     }
-     else {
-    // If adding a new member, reset to initialState
-    dispatch({ type: 'SET_INITIAL_DATA', payload: initialState });
-  }
   }, [initialData]);
 
-  const handleInputChange = (field, value, nestedField = null) => {
-    console.log(`Updating ${field} ${nestedField ? `-> ${nestedField}` : ""} with value: ${value}`);
-    
-    if (field === 'discipleshipClassId') {
-      value = value ? parseInt(value, 10) : null;
-    }
+  // Consolidated handleInputChange
+  const handleInputChange = (event) => {
+    const { name, value, type, checked } = event.target;
 
-    if (nestedField) {
-      dispatch({ type: 'UPDATE_NESTED_FIELD', field, nestedField, value });
+    let newValue;
+    if (type === 'checkbox') {
+      newValue = checked;
+    } else if (name === 'discipleshipClassId') {
+      newValue = value ? parseInt(value, 10) : null;
+    } else if (name === 'isVisiting') {
+      newValue = value === 'true' || value === true;
     } else {
-      dispatch({ type: 'UPDATE_FIELD', field, value });
+      newValue = value;
     }
-  };
 
-   // Disable 'Is a Full Member' checkbox when the member is 'Visiting' or 'Aspiring Member'
-   const isFullMemberDisabled = formData.isVisiting || formData.memberStatus === "Visiting" || formData.memberStatus === "Aspiring Member";
-
-   const handleStatusChange = (event) => {
-    const { value } = event.target;
     dispatch({
-      type: 'UPDATE_FIELD',
-      field: 'memberStatus',
-      value,
-    });
-    // Update 'isVisiting' if status is Visiting or Aspiring Member
-    dispatch({
-      type: 'UPDATE_FIELD',
-      field: 'isVisiting',
-      value: value === "Visiting" || value === "Aspiring Member",
+      type: name === 'isVisiting' ? 'UPDATE_IS_VISITING' : 'UPDATE_FIELD',
+      field: name,
+      value: newValue,
     });
   };
 
+  // Disable 'Is a Full Member' checkbox when isVisiting is true
+  const isFullMemberDisabled = formData.isVisiting;
 
   const handleSubmit = async () => {
     try {
       // Construct the volunteering array
       const volunteering = [];
-  
+
       if (formData.fellowshipMinistryName && formData.fellowshipRole) {
         volunteering.push({
           ministry_type: 'Fellowship',
@@ -221,7 +208,7 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
           role: formData.fellowshipRole,
         });
       }
-  
+
       if (formData.serviceMinistryName && formData.serviceRole) {
         volunteering.push({
           ministry_type: 'Service',
@@ -229,7 +216,7 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
           role: formData.serviceRole,
         });
       }
-  
+
       // Construct the payload with correct field names
       const payload = {
         sir_name: formData.firstName, // Changed from 'first_name' to 'sir_name'
@@ -255,7 +242,7 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
         },
         volunteering, // Now an array of volunteering entries
       };
-  
+
       let response;
       if (initialData) {
         // Editing an existing member
@@ -266,14 +253,14 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
         response = await axios.post('https://statistics-production-032c.up.railway.app/api/members/add', payload);
         console.log(`Member added successfully with ID: ${response.data.memberId}`);
       }
-  
+
       // Show confirmation dialog
       setConfirmationOpen(true);
       // Notify parent to refresh the member list
       if (onSuccess) {
         onSuccess();
       }
-  
+
     } catch (error) {
       if (error.response) {
         console.error("Error submitting form:", error.response.data);
@@ -283,7 +270,6 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
       alert("Failed to submit the form. Please try again.");
     }
   };
-  
 
   const handleDeleteMember = () => {
     setMemberToDelete(initialData);
@@ -365,8 +351,9 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="First Name"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                    name="firstName"
                     value={formData.firstName}
-                    onChange={(e) => handleInputChange("firstName", e.target.value)}
+                    onChange={handleInputChange}
                   />
                 </Grid>
                 <Grid item xs={12} md={4}>
@@ -375,8 +362,9 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="Middle Name"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                    name="middleName"
                     value={formData.middleName}
-                    onChange={(e) => handleInputChange("middleName", e.target.value)}
+                    onChange={handleInputChange}
                   />
                 </Grid>
                 <Grid item xs={12} md={4}>
@@ -385,8 +373,9 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="Last Name"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                    name="lastName"
                     value={formData.lastName}
-                    onChange={(e) => handleInputChange("lastName", e.target.value)}
+                    onChange={handleInputChange}
                   />
                 </Grid>
                 <Grid item xs={12} md={4}>
@@ -397,8 +386,9 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     InputLabelProps={{ shrink: true }}
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                    name="dob"
                     value={formData.dob}
-                    onChange={(e) => handleInputChange("dob", e.target.value)}
+                    onChange={handleInputChange}
                   />
                 </Grid>
                 <Grid item xs={12} md={4}>
@@ -407,8 +397,9 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="Contact Info (+254)"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                    name="contactInfo"
                     value={formData.contactInfo}
-                    onChange={(e) => handleInputChange("contactInfo", e.target.value)}
+                    onChange={handleInputChange}
                   />
                 </Grid>
               </Grid>
@@ -426,8 +417,10 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                   <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
                     <InputLabel>Gender</InputLabel>
                     <Select
+                      name="gender"
                       value={formData.gender}
-                      onChange={(e) => handleInputChange("gender", e.target.value)}
+                      onChange={handleInputChange}
+                      label="Gender"
                     >
                       <MenuItem value="Male">Male</MenuItem>
                       <MenuItem value="Female">Female</MenuItem>
@@ -439,8 +432,10 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                   <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
                     <InputLabel>Residence</InputLabel>
                     <Select
+                      name="location"
                       value={formData.location}
-                      onChange={(e) => handleInputChange("location", e.target.value)}
+                      onChange={handleInputChange}
+                      label="Residence"
                     >
                       <MenuItem value="Zimmerman">Zimmerman</MenuItem>
                       <MenuItem value="Kasarani">Kasarani</MenuItem>
@@ -464,16 +459,19 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="County of Origin"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                    name="countyOfOrigin"
                     value={formData.countyOfOrigin}
-                    onChange={(e) => handleInputChange("countyOfOrigin", e.target.value)}
+                    onChange={handleInputChange}
                   />
                 </Grid>
                 <Grid item xs={12} md={4}>
                   <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
                     <InputLabel>Occupation</InputLabel>
                     <Select
+                      name="occupationStatus"
                       value={formData.occupationStatus}
-                      onChange={(e) => handleInputChange("occupationStatus", e.target.value)}
+                      onChange={handleInputChange}
+                      label="Occupation"
                     >
                       {/* Engineering and Technical Fields */}
                       <MenuItem value="Engineering and Technical">Engineering and Technical</MenuItem>
@@ -512,8 +510,10 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                   <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
                     <InputLabel>Marriage Status</InputLabel>
                     <Select
+                      name="marriedStatus"
                       value={formData.marriedStatus}
-                      onChange={(e) => handleInputChange("marriedStatus", e.target.value)}
+                      onChange={handleInputChange}
+                      label="Marriage Status"
                     >
                       <MenuItem value="Married">Married</MenuItem>
                       <MenuItem value="Single">Single</MenuItem>
@@ -523,15 +523,18 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                   </FormControl>
                 </Grid>
                 <Grid item xs={12} md={4}>
+                  {/* Visitor Status Control */}
                   <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}>
-                    <InputLabel>Status</InputLabel>
+                    <InputLabel id="is-visiting-label">Visitor Status</InputLabel>
                     <Select
-                      value={formData.memberStatus}
-                      onChange={handleStatusChange}
+                      labelId="is-visiting-label"
+                      name="isVisiting"
+                      value={formData.isVisiting}
+                      onChange={handleInputChange}
+                      label="Visitor Status"
                     >
-                      <MenuItem value="Visiting">Just Visiting</MenuItem>
-                      <MenuItem value="Aspiring Member">Aspiring Member</MenuItem>
-                      <MenuItem value="None">None</MenuItem>
+                      <MenuItem value={true}>Visiting</MenuItem>
+                      <MenuItem value={false}>None</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -553,8 +556,9 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="Next of Kin First Name"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                    name="firstName"
                     value={formData.nextOfKin.firstName}
-                    onChange={(e) => handleInputChange("nextOfKin", e.target.value, "firstName")}
+                    onChange={(e) => handleInputChange(e)}
                   />
                 </Grid>
                 <Grid item xs={12} md={4}>
@@ -563,8 +567,9 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="Next of Kin Last Name"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                    name="lastName"
                     value={formData.nextOfKin.lastName}
-                    onChange={(e) => handleInputChange("nextOfKin", e.target.value, "lastName")}
+                    onChange={(e) => handleInputChange(e)}
                   />
                 </Grid>
                 <Grid item xs={12} md={4}>
@@ -573,8 +578,9 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="Next of Kin Contact Info"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
+                    name="contactInfo"
                     value={formData.nextOfKin.contactInfo}
-                    onChange={(e) => handleInputChange("nextOfKin", e.target.value, "contactInfo")}
+                    onChange={(e) => handleInputChange(e)}
                   />
                 </Grid>
               </Grid>
@@ -588,35 +594,9 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
             <Typography variant="h6">General Info</Typography>
             <Box sx={{ marginTop: '1rem' }}>
               <Grid container spacing={2}>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff', height: '55px' }}>
-                  <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'center' }}>
-                      <input
-                        type="checkbox"
-                        style={{
-                          width: '20px',
-                          height: '20px',
-                          transform: 'scale(1.5)',
-                          marginRight: '8px',
-                          marginTop: '15px',
-                          marginLeft: '16px',
-                        }}
-                        checked={formData.isFullMember}
-                        onChange={(e) => handleInputChange("isFullMember", e.target.checked)}
-                        disabled={isFullMemberDisabled}
-                      />
-                      Is a Full Member?
-                    </label>
-                  </Typography>
-                </FormControl>
-              </Grid>
-                <Grid item xs={12} md={3}>
-                  <FormControl
-                    fullWidth
-                    variant="outlined"
-                    sx={{ borderRadius: '8px', backgroundColor: '#ffffff', height: '55px' }}
-                  >
+                {/* Is a Full Member */}
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff', height: '55px' }}>
                     <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>
                       <label style={{ display: 'flex', alignItems: 'center' }}>
                         <input
@@ -628,10 +608,35 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                             marginRight: '8px',
                             marginTop: '15px',
                             marginLeft: '16px',
-                            textAlign: 'justify'
                           }}
+                          name="isFullMember"
+                          checked={formData.isFullMember}
+                          onChange={handleInputChange}
+                          disabled={isFullMemberDisabled}
+                        />
+                        Is a Full Member?
+                      </label>
+                    </Typography>
+                  </FormControl>
+                </Grid>
+                {/* Baptized */}
+                <Grid item xs={12} md={3}>
+                  <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff', height: '55px' }}>
+                    <Typography variant="body1" sx={{ fontSize: '1.2rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center' }}>
+                        <input
+                          type="checkbox"
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            transform: 'scale(1.5)',
+                            marginRight: '8px',
+                            marginTop: '15px',
+                            marginLeft: '16px',
+                          }}
+                          name="baptized"
                           checked={formData.baptized}
-                          onChange={(e) => handleInputChange("baptized", e.target.checked)}
+                          onChange={handleInputChange}
                         />
                         Baptized?
                       </label>
@@ -654,9 +659,10 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                   <FormControl fullWidth variant="outlined" sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginTop: "1rem" }}>
                     <InputLabel>Discipleship Class</InputLabel>
                     <Select
+                      name="discipleshipClassId"
                       label="Discipleship Class"
                       value={formData.discipleshipClassId || ""}
-                      onChange={(e) => handleInputChange("discipleshipClassId", e.target.value)}
+                      onChange={handleInputChange}
                     >
                       <MenuItem value="">None</MenuItem>
                       {discipleshipClasses.map((cls) => (
@@ -666,9 +672,6 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                       ))}
                     </Select>
                   </FormControl>
-
-
-
                 </Grid>
 
                 {/* Completed Class */}
@@ -677,10 +680,15 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                   <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff', marginTop: '1rem' }}>
                     <InputLabel>Completed</InputLabel>
                     <Select
+                      name="completedClass"
                       label="Completed Class"
                       value={formData.completedClass ? "Yes" : "No"}
                       onChange={(e) =>
-                        handleInputChange("completedClass", e.target.value === "Yes")
+                        dispatch({
+                          type: 'UPDATE_FIELD',
+                          field: "completedClass",
+                          value: e.target.value === "Yes",
+                        })
                       }
                     >
                       <MenuItem value="Yes">Yes</MenuItem>
@@ -707,27 +715,29 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                   Fellowship Ministry
                 </Typography>
                 <FormControl fullWidth variant="outlined" sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem"  }}>
-                <InputLabel>Ministry</InputLabel>
-                <Select
-                  value={formData.fellowshipMinistryName}
-                  onChange={(e) => handleInputChange("fellowshipMinistryName", e.target.value)}
-                >
-                  {fellowshipMinistries.map((ministry) => (
-                    <MenuItem key={ministry} value={ministry}>
-                      {ministry}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                  <InputLabel>Ministry</InputLabel>
+                  <Select
+                    name="fellowshipMinistryName"
+                    value={formData.fellowshipMinistryName}
+                    onChange={handleInputChange}
+                    label="Ministry"
+                  >
+                    {fellowshipMinistries.map((ministry) => (
+                      <MenuItem key={ministry} value={ministry}>
+                        {ministry}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
                 <TextField
+                  name="fellowshipRole"
                   label="Role"
                   variant="outlined"
                   fullWidth
                   value={formData.fellowshipRole}
-                  onChange={(e) => handleInputChange("fellowshipRole", e.target.value)}
+                  onChange={handleInputChange}
                   sx={{ backgroundColor: "#ffffff", marginBottom: "1rem" }}
                 />
-             
               </Grid>
 
               {/* Service Ministry Section */}
@@ -736,33 +746,35 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                   Service Ministry
                 </Typography>
                 <FormControl
-          fullWidth
-          variant="outlined"
-          sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem" }}
-        >
-          <InputLabel>Ministry</InputLabel>
-          <Select
-            value={formData.serviceMinistryName}
-            onChange={(e) => handleInputChange("serviceMinistryName", e.target.value)}
-            label="Ministry"
-          >
-            {serviceMinistries.map((ministry) => (
-              <MenuItem key={ministry} value={ministry}>
-                {ministry}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        
-        {/* Role as a TextField */}
-        <TextField
-          label="Role"
-          variant="outlined"
-          fullWidth
-          value={formData.serviceRole}
-          onChange={(e) => handleInputChange("serviceRole", e.target.value)}
-          sx={{ backgroundColor: "#ffffff" }}
-        />
+                  fullWidth
+                  variant="outlined"
+                  sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem" }}
+                >
+                  <InputLabel>Ministry</InputLabel>
+                  <Select
+                    name="serviceMinistryName"
+                    value={formData.serviceMinistryName}
+                    onChange={handleInputChange}
+                    label="Ministry"
+                  >
+                    {serviceMinistries.map((ministry) => (
+                      <MenuItem key={ministry} value={ministry}>
+                        {ministry}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                {/* Role as a TextField */}
+                <TextField
+                  name="serviceRole"
+                  label="Role"
+                  variant="outlined"
+                  fullWidth
+                  value={formData.serviceRole}
+                  onChange={handleInputChange}
+                  sx={{ backgroundColor: "#ffffff" }}
+                />
               </Grid>
             </Grid>
           </Card>
@@ -817,9 +829,9 @@ AddMemberForm.propTypes = {
     baptized: PropTypes.bool,
     discipleshipClassId: PropTypes.number,
     completedClass: PropTypes.bool,
-    fellowshipCategory: PropTypes.string,
+    fellowshipMinistryName: PropTypes.string,
     fellowshipRole: PropTypes.string,
-    serviceCategory: PropTypes.string,
+    serviceMinistryName: PropTypes.string,
     serviceRole: PropTypes.string,
     conversionDate: PropTypes.string,
     nextOfKinFirstName: PropTypes.string,
