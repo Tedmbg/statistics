@@ -15,7 +15,7 @@ function DoughnutC(props) {
         labels: {
           usePointStyle: true,
           pointStyle: "circle",
-          padding: 15,
+          padding: 10,
         },
       },
       datalabels: {
@@ -32,6 +32,7 @@ function DoughnutC(props) {
         font: {
           size: 14,
           weight: "bold",
+          padding:10,
         },
       },
     },

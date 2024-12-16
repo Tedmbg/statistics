@@ -1,41 +1,67 @@
-// src/pages/LoginPage/LoginScreen.jsx
+// src/components/LoginScreen.jsx
 import { useContext, useState } from "react";
-import { Box, Button, Grid, TextField, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Grid,
+  TextField,
+  Typography,
+  CircularProgress,
+} from "@mui/material";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/Urim_logo.png";
 import video from "../../assets/urim_logging.mp4";
+import axios from "axios";
 
 export default function LoginScreen() {
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const DEFAULT_EMAIL = "admin@benchInc.com";
-  const DEFAULT_PASSWORD = "123";
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // Check credentials
-    if (email === DEFAULT_EMAIL && password === DEFAULT_PASSWORD) {
-      login(); // Sets isLoggedIn to true
-      navigate("/dashboard"); // Redirect to dashboard
-    } else {
-      setError("Invalid email or password");
+    setError(null);
+    setLoading(true);
+    console.log("Login started");
+
+    try {
+      const response = await axios.post(
+        "https://statistics-production-032c.up.railway.app/api/users/login",
+        { email, password }
+      );
+
+      const { token, role, user_id } = response.data.data;
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("userRole", role);
+      localStorage.setItem("userId", user_id);
+
+      login();
+      navigate("/");
+    } catch (error) {
+      if (error.response && error.response.data.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("An unexpected error occurred. Please try again later.");
+      }
+      console.error("Login error:", error);
+    } finally {
+      setLoading(false);
+      console.log("Login ended");
     }
   };
 
   return (
     <Grid container sx={{ height: "100vh", backgroundColor: "black" }}>
-      {/* Video Section (left) */}
+      {/* Video Section */}
       <Grid
         item
         xs={12}
         md={6}
-        sm={0}
         sx={{
           position: "relative",
           overflow: "hidden",
@@ -73,7 +99,7 @@ export default function LoginScreen() {
         />
       </Grid>
 
-      {/* Form Section (right) */}
+      {/* Login Form Section */}
       <Grid
         item
         xs={12}
@@ -91,7 +117,7 @@ export default function LoginScreen() {
           <img
             src={logo}
             alt="Logo"
-            style={{ maxWidth: "100%", height: "auto" }}
+            style={{ maxWidth: "100%", height: "auto", marginBottom: "1rem" }}
           />
           <Typography
             variant="h4"
@@ -105,7 +131,11 @@ export default function LoginScreen() {
           </Typography>
 
           {error && (
-            <Typography variant="body2" color="error" sx={{ marginBottom: "1rem" }}>
+            <Typography
+              variant="body2"
+              color="error"
+              sx={{ marginBottom: "1rem" }}
+            >
               {error}
             </Typography>
           )}
@@ -157,18 +187,40 @@ export default function LoginScreen() {
               type="submit"
               variant="contained"
               fullWidth
+              disabled={loading}
+              aria-busy={loading}
+              aria-disabled={loading}
               sx={{
-                backgroundColor: "#896801",
+                backgroundColor: loading ? "#1977D2" : "#896801",
                 color: "#fff",
                 fontSize: "1rem",
                 fontWeight: "bold",
                 textTransform: "none",
+                height: "3rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 "&:hover": {
-                  backgroundColor: "#896801",
+                  backgroundColor: loading ? "#1977D2" : "#9D7C02",
                 },
               }}
             >
-              Sign in
+              {loading ? (
+                <Box display="flex" alignItems="center"  justifyContent="center">
+                  <CircularProgress
+                    size={40}
+                    sx={{
+                      color: "#FFD700", // Custom Gold color
+                    }}
+                  />
+
+                  <Typography sx={{ marginLeft: "0.5rem" }}>
+                    Signing in...
+                  </Typography>
+                </Box>
+              ) : (
+                "Sign in"
+              )}
             </Button>
           </Box>
         </Box>

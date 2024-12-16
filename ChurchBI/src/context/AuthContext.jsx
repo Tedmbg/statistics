@@ -5,24 +5,31 @@ export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authToken, setAuthToken] = useState(null);
 
+  // Rehydrate authentication state from localStorage
   useEffect(() => {
-    const userLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-    setIsLoggedIn(userLoggedIn);
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      setAuthToken(token);
+      setIsLoggedIn(true);
+    }
   }, []);
 
-  const login = () => {
-    localStorage.setItem("isLoggedIn", "true");
+  const login = (token) => {
+    localStorage.setItem("authToken", token); // Save token
+    setAuthToken(token);
     setIsLoggedIn(true);
   };
 
   const logout = () => {
-    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("authToken");
+    setAuthToken(null);
     setIsLoggedIn(false);
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, authToken, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

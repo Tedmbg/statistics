@@ -40,3 +40,15 @@ export const fetchMonthlyCompletedStats = async (year) => {
     }
   };
   
+  // Function to fetch instructors
+export const fetchInstructors = async () => {
+  try {
+    const response = await axios.get(
+      "https://statistics-production-032c.up.railway.app/api/instructors"
+    );
+    return response.data.data; // Return the array of instructors
+  } catch (error) {
+    console.error("Error fetching instructors:", error);
+    throw error; // Propagate error for handling in the component
+  }
+};

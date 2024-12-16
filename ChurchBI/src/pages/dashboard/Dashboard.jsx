@@ -1,17 +1,34 @@
-import { Box, Typography, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
-import DashboardCard from './DashboardCard';
+import {
+  Box,
+  Typography,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+} from "@mui/material";
+import DashboardCard from "./DashboardCard";
 import { useState } from "react";
 
 export default function Dashboard() {
   const [year, setYear] = useState(2024);
   const [month, setMonth] = useState("September");
 
+  const today = new Date();
+
+  // Format today's date in the correct format
+  const formattedDate = today.toLocaleDateString("en-US", {
+    weekday: "short", // Short weekday, e.g., 'Sun'
+    day: "numeric", // Day of the month, e.g., '15'
+    month: "short", // Short month, e.g., 'Sep'
+    year: "numeric", // Full year, e.g., '2024'
+  });
+
   return (
     <Box
       sx={{
-        display: 'flex',
-        padding: '2rem',
-        gap: '2rem',
+        display: "flex",
+        padding: "2rem",
+        gap: "2rem",
       }}
     >
       {/* Main Dashboard Content */}
@@ -20,7 +37,7 @@ export default function Dashboard() {
           Dashboard
         </Typography>
         <Typography variant="subtitle1" color="text.secondary">
-          Sun 15 Sep/2024
+          {formattedDate}
         </Typography>
         <DashboardCard />
       </Box>
@@ -29,12 +46,12 @@ export default function Dashboard() {
       <Box
         sx={{
           width: 200,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1.5rem',
-          padding: '1rem',
-          backgroundColor: '#fefeve',
-          borderRadius: '8px',
+          display: "flex",
+          flexDirection: "column",
+          gap: "1.5rem",
+          padding: "1rem",
+          backgroundColor: "#fefeve",
+          borderRadius: "8px",
         }}
       >
         <FormControl fullWidth>
@@ -43,8 +60,7 @@ export default function Dashboard() {
             value={year}
             onChange={(e) => setYear(e.target.value)}
             label="Year"
-            style={{backgroundColor:"white",border:"grey"
-            }}
+            style={{ backgroundColor: "white", border: "grey" }}
           >
             <MenuItem value={2024}>2024</MenuItem>
             <MenuItem value={2023}>2023</MenuItem>
@@ -59,8 +75,7 @@ export default function Dashboard() {
             value={month}
             onChange={(e) => setMonth(e.target.value)}
             label="Month"
-            style={{backgroundColor:"white",border:"grey"
-            }}
+            style={{ backgroundColor: "white", border: "grey" }}
           >
             <MenuItem value="January">January</MenuItem>
             <MenuItem value="February">February</MenuItem>

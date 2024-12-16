@@ -7,13 +7,7 @@ import workStatusData from "../../../data/workStatusService.json";
 
 function FellowshipMinistry() {
   const barChartData = {
-    labels: [
-      "Ushering",
-      "Counselling",
-      "Teens",
-      "Media/Sound",
-      "Traffic"
-    ],
+    labels: ["Ushering", "Counselling", "Teens", "Media/Sound", "Traffic"],
     datasets: [
       {
         label: "Male",
@@ -41,15 +35,14 @@ function FellowshipMinistry() {
     },
   };
   return (
-
     <Box sx={{ padding: "2rem" }}>
       <Typography variant="h4" fontWeight="bold" gutterBottom>
         Overview
       </Typography>
 
       <Grid container spacing={2}>
-        {/* Top Row Cards */}
-        <Grid item xs={12} md={3} sx={{ marginRight: '8rem' }}>
+        {/* Total Members */}
+        <Grid item xs={12} sm={6} md={3}>
           <Card
             sx={{
               padding: "1.5rem",
@@ -57,56 +50,75 @@ function FellowshipMinistry() {
               color: "#fff",
               height: "15.75rem",
               textAlign: "center",
-              display:"flex",
+              display: "flex",
               flexDirection: "column",
               justifyContent: "center",
               alignItems: "center",
+              width: "100%", // Full width within Grid item
             }}
           >
-            <img src="assets/total members.png" alt="Total Members" />
-            <Typography variant="h6">
-            Total Number of Ministries
+            <img
+              src="src/assets/total_members.png" // Ensure correct path
+              alt="Total Members"
+              style={{ height: "2.5rem", width: "2.5rem", marginBottom: "1rem" }}
+            />
+            <Typography variant="h6" align="center">
+              Total Number of Ministries
             </Typography>
             <Typography variant="h3">120</Typography>
           </Card>
-       
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        {/* Gender Ratio */}
+        <Grid item xs={12} sm={6} md={3}>
           <Card
             sx={{
               padding: "1.5rem",
+              backgroundColor: "#FFF",
+              color: "#000",
               height: "15.75rem",
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
-              backgroundColor: "#FFF",
+              alignItems: "center",
+              width: "100%", // Full width within Grid item
             }}
           >
-            <Typography variant="h6" style={{ textAlign: "center" }}>
+            <Typography variant="h6" sx={{ textAlign: "center", marginBottom: "1rem" }}>
               Gender Ratio
             </Typography>
-            <Box display="flex" justifyContent="space-between">
-              <img
-                src="/assets/male_avatar.png"
-                style={{ height: "50px", width: "50px" }}
-              />
-              <Typography sx={{ fontSize: "1.575rem", mt: 1, pl: 1, pr: 0.1 }}>
-                40%
-              </Typography>
-              <img
-                src="/assets/female_avatar.png"
-                style={{ height: "50px", width: "50px" }}
-              />
-              <Typography sx={{ fontSize: "1.575rem", mt: 1, pl: 1 }}>
-                60%
-              </Typography>
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-around"
+              width="100%"
+            >
+              {/* Male */}
+              <Box textAlign="center">
+                <img
+                  src="/assets/male_avatar.png" // Ensure correct path
+                  alt="Male Members"
+                  style={{ height: "50px", width: "50px", marginBottom: "0.5rem" }}
+                />
+                <Typography sx={{ fontSize: "1.575rem" }}>40%</Typography>
+              </Box>
+
+              {/* Female */}
+              <Box textAlign="center">
+                <img
+                  src="/assets/female_avatar.png" // Ensure correct path
+                  alt="Female Members"
+                  style={{ height: "50px", width: "50px", marginBottom: "0.5rem" }}
+                />
+                <Typography sx={{ fontSize: "1.575rem" }}>60%</Typography>
+              </Box>
             </Box>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={3}>
-        <Card
+        {/* Average Growth */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
             sx={{
               padding: "1.5rem",
               backgroundColor: "#2B3868",
@@ -116,31 +128,62 @@ function FellowshipMinistry() {
               flexDirection: "column",
               justifyContent: "center",
               alignItems: "center",
+              width: "100%", // Removed fixed width
             }}
           >
-            <img src="/assets/retationrate.png" alt="Retention Rate" />
-            <Typography variant="h6">Average growth </Typography>
+            <img
+              src="src/assets/retention_rate.png" // Ensure correct path
+              alt="Retention Rate"
+              style={{ height: "3.5rem", width: "3.5rem", marginBottom: "1rem" }}
+            />
+            <Typography variant="h6">Average Growth</Typography>
             <Typography variant="h3">17%</Typography>
           </Card>
         </Grid>
 
-
-</Grid>
-        {/* Ministry Growth Chart */}
-        <Grid marginTop={6} marginBottom={6}>
-        <Card sx={{ height: 730}}>
-        <BarChart
-              data={barChartData}
-              options={barChartOptions}
-              title="Number of Members"
+        {/* Total Number of Volunteers */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
+            sx={{
+              padding: "1.5rem",
+              backgroundColor: "#2B3868",
+              color: "#fff",
+              height: "15.75rem",
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              width: "100%", // Full width within Grid item
+            }}
+          >
+            <img
+              src="src/assets/total_members.png" // Ensure correct path
+              alt="Total Volunteers"
+              style={{ height: "2.5rem", width: "2.5rem", marginBottom: "1rem" }}
             />
-            </Card>
-            </Grid>
-  
+            <Typography variant="h6" align="center">
+              Total Number of Volunteers
+            </Typography>
+            <Typography variant="h3">120</Typography>
+          </Card>
+        </Grid>
+      </Grid>
 
-        {/* Sidebar: Age and Work Status Pie Charts */}
+      {/* Ministry Growth Chart */}
+      <Grid marginTop={6} marginBottom={6}>
+        <Card sx={{ height: 730 }}>
+          <BarChart
+            data={barChartData}
+            options={barChartOptions}
+            title="Number of Members"
+          />
+        </Card>
+      </Grid>
 
-        <Grid container spacing={2}>
+      {/* Sidebar: Age and Work Status Pie Charts */}
+
+      <Grid container spacing={2}>
         {/* Left Section - Donut Charts */}
         <Grid item xs={12} md={8}>
           <Grid container spacing={2}>
@@ -165,7 +208,7 @@ function FellowshipMinistry() {
 
         {/* Right Section - Service Ministries */}
         <Grid item xs={12} md={4}>
-          <Card sx={{ padding: "1rem", backgroundColor: "#FFF" }}>
+          <Card sx={{ padding: "1rem", backgroundColor: "#FFF",height:"26.25rem" }}>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
               Fellowship Ministries
             </Typography>
@@ -192,6 +235,5 @@ function FellowshipMinistry() {
     </Box>
   );
 }
-
 
 export default FellowshipMinistry;
