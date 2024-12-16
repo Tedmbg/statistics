@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import axios from "axios";
+import { fetchDiscipleshipClasses } from '../../../data/discipleship';
 
 // Define the initial state
 const initialState = {
@@ -49,9 +50,9 @@ const initialState = {
   baptized: false,
   discipleshipClassId: null,
   completedClass: false,
-  fellowshipCategory: "",
+  fellowshipMinistryName: "", 
   fellowshipRole: "",
-  serviceCategory: "",
+  serviceMinistryName: "",
   serviceRole: "",
   conversionDate: '',
   nextOfKin: {
@@ -94,6 +95,49 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
 
   const [formData, dispatch] = useReducer(formReducer, initialState);
 
+  const [fellowshipMinistries, setFellowshipMinistries] = useState([]);
+  const [serviceMinistries, setServiceMinistries] = useState([]);
+  const [discipleshipClasses, setDiscipleshipClasses] = useState([]);
+
+
+
+  useEffect(() => {
+    // Fetch Fellowship Ministries
+    fetch('https://statistics-production-032c.up.railway.app/api/ministries?type=Fellowship')
+      .then(response => response.json())
+      .then(data => setFellowshipMinistries(data))
+      .catch(err => console.error('Error fetching fellowship ministries:', err));
+  
+    // Fetch Service Ministries
+    fetch('https://statistics-production-032c.up.railway.app/api/ministries?type=Service')
+      .then(response => response.json())
+      .then(data => setServiceMinistries(data))
+      .catch(err => console.error('Error fetching service ministries:', err));
+  }, []);
+  
+  useEffect(() => {
+    const loadDiscipleshipClasses = async () => {
+      try {
+        const classes = await fetchDiscipleshipClasses();
+        setDiscipleshipClasses(classes); // Save the fetched classes
+      } catch (error) {
+        console.error("Failed to load discipleship classes:", error);
+      }
+    };
+  
+    loadDiscipleshipClasses();
+  }, []);
+  
+
+  useEffect(() => {
+    if (initialData) {
+        dispatch({ type: 'SET_INITIAL_DATA', payload: initialData });
+    } else {
+        dispatch({ type: 'SET_INITIAL_DATA', payload: initialState });
+    }
+}, [initialData]);
+
+
   // Initialize form data when editing a member
   useEffect(() => {
     if (initialData) {
@@ -118,13 +162,18 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
         serviceCategory: initialData.serviceCategory || "",
         serviceRole: initialData.serviceRole || "",
         conversionDate: initialData.conversionDate || '',
-        nextOfKinFirstName: initialData.nextOfKinFirstName || '', // Mapped nextOfKin data
-        nextOfKinLastName: initialData.nextOfKinLastName || '',
-        nextOfKinContactInfo: initialData.nextOfKinContactInfo || '',
-        volunteeringRole: initialData.volunteeringRole || '',
+        nextOfKin: {
+          firstName: initialData.nextOfKinFirstName || '',
+          lastName: initialData.nextOfKinLastName || '',
+          contactInfo: initialData.nextOfKinContactInfo || '',
+        },
       };
       dispatch({ type: 'SET_INITIAL_DATA', payload: mappedData });
     }
+     else {
+    // If adding a new member, reset to initialState
+    dispatch({ type: 'SET_INITIAL_DATA', payload: initialState });
+  }
   }, [initialData]);
 
   const handleInputChange = (field, value, nestedField = null) => {
@@ -159,33 +208,31 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
     });
   };
 
-  const discipleshipClasses = [
-    { id: 1, name: "Group 345B" },
-    { id: 2, name: "Group 456Y" },
-    { id: 3, name: "Group 789Z" },
-  ];
-
-  const ministryData = {
-    "Fellowship Ministry": {
-      categories: {
-        "Age-Based Fellowships": ["Youth Group Leader", "Senior Group Leader", "Member"],
-        "Small Groups": ["Bible Study Leader", "Prayer Group Leader", "Member"],
-        "New Member Integration": ["Hospitality Coordinator", "Follow-Up Coordinator", "Member"],
-      },
-    },
-    "Service Ministry": {
-      categories: {
-        "Ushering and Hospitality": ["Usher", "Greeter", "Member"],
-        "Music and Worship": ["Choir Member", "Worship Leader", "Member"],
-        "Media and Technology": ["Audio Technician", "Livestream Operator", "Member"],
-      },
-    },
-  };
 
   const handleSubmit = async () => {
     try {
+      // Construct the volunteering array
+      const volunteering = [];
+  
+      if (formData.fellowshipMinistryName && formData.fellowshipRole) {
+        volunteering.push({
+          ministry_type: 'Fellowship',
+          ministry_name: formData.fellowshipMinistryName,
+          role: formData.fellowshipRole,
+        });
+      }
+  
+      if (formData.serviceMinistryName && formData.serviceRole) {
+        volunteering.push({
+          ministry_type: 'Service',
+          ministry_name: formData.serviceMinistryName,
+          role: formData.serviceRole,
+        });
+      }
+  
+      // Construct the payload with correct field names
       const payload = {
-        sir_name: formData.firstName,
+        sir_name: formData.firstName, // Changed from 'first_name' to 'sir_name'
         middle_name: formData.middleName,
         last_name: formData.lastName,
         date_of_birth: formData.dob,
@@ -196,8 +243,6 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
         occupation_status: formData.occupationStatus,
         married_status: formData.marriedStatus,
         is_visiting: formData.isVisiting,
-        fellowship_ministries: formData.fellowshipRole,
-        service_ministries: formData.serviceRole,
         is_full_member: formData.isFullMember,
         baptized: formData.baptized,
         conversion_date: formData.conversionDate || null,
@@ -208,12 +253,9 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
           last_name: formData.nextOfKin.lastName || '',
           contact_info: formData.nextOfKin.contactInfo || '',
         },
-        volunteering: {
-          fellowshipRole: formData.fellowshipRole || '',
-          serviceRole: formData.serviceRole || '',
-        },
+        volunteering, // Now an array of volunteering entries
       };
-
+  
       let response;
       if (initialData) {
         // Editing an existing member
@@ -224,19 +266,24 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
         response = await axios.post('https://statistics-production-032c.up.railway.app/api/members/add', payload);
         console.log(`Member added successfully with ID: ${response.data.memberId}`);
       }
-
+  
       // Show confirmation dialog
       setConfirmationOpen(true);
       // Notify parent to refresh the member list
       if (onSuccess) {
         onSuccess();
       }
-
+  
     } catch (error) {
-      console.error("Error submitting form:", error.response?.data || error.message);
+      if (error.response) {
+        console.error("Error submitting form:", error.response.data);
+      } else {
+        console.error("Error submitting form:", error.message);
+      }
       alert("Failed to submit the form. Please try again.");
     }
   };
+  
 
   const handleDeleteMember = () => {
     setMemberToDelete(initialData);
@@ -494,6 +541,7 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
         </Grid>
 
         {/* Next of Kin Section */}
+       
         <Grid item xs={12} md={12}>
           <Card sx={{ padding: '1.5rem', marginBottom: '1.5rem', backgroundColor: 'transparent', boxShadow: 'none' }}>
             <Typography variant="h6">Next of Kin</Typography>
@@ -505,7 +553,7 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="Next of Kin First Name"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
-                    value={formData.nextOfKinFirstName || ''}
+                    value={formData.nextOfKin.firstName}
                     onChange={(e) => handleInputChange("nextOfKin", e.target.value, "firstName")}
                   />
                 </Grid>
@@ -515,7 +563,7 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="Next of Kin Last Name"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
-                    value={formData.nextOfKinLastName || ''}
+                    value={formData.nextOfKin.lastName}
                     onChange={(e) => handleInputChange("nextOfKin", e.target.value, "lastName")}
                   />
                 </Grid>
@@ -525,7 +573,7 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                     label="Next of Kin Contact Info"
                     variant="outlined"
                     sx={{ borderRadius: '8px', backgroundColor: '#ffffff' }}
-                    value={formData.nextOfKinContactInfo || ''}
+                    value={formData.nextOfKin.contactInfo}
                     onChange={(e) => handleInputChange("nextOfKin", e.target.value, "contactInfo")}
                   />
                 </Grid>
@@ -603,21 +651,24 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                 {/* Discipleship Class */}
                 <Grid item xs={12} md={6}>
                   <Typography variant="h6">Discipleship Class</Typography>
-                  <FormControl fullWidth variant="outlined" sx={{ borderRadius: '8px', backgroundColor: '#ffffff', marginTop: '1rem' }}>
-                    <InputLabel>Class</InputLabel>
+                  <FormControl fullWidth variant="outlined" sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginTop: "1rem" }}>
+                    <InputLabel>Discipleship Class</InputLabel>
                     <Select
                       label="Discipleship Class"
-                      value={formData.discipleshipClassId !== null ? formData.discipleshipClassId : ''}
+                      value={formData.discipleshipClassId || ""}
                       onChange={(e) => handleInputChange("discipleshipClassId", e.target.value)}
                     >
                       <MenuItem value="">None</MenuItem>
                       {discipleshipClasses.map((cls) => (
-                        <MenuItem key={cls.id} value={cls.id}>
-                          {cls.name}
+                        <MenuItem key={cls.class_id} value={cls.class_id}>
+                          {cls.class_name}
                         </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
+
+
+
                 </Grid>
 
                 {/* Completed Class */}
@@ -649,51 +700,34 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
               Volunteering
             </Typography>
             <Grid container spacing={4}>
+
               {/* Fellowship Ministry Section */}
               <Grid item xs={12}>
                 <Typography variant="subtitle1" sx={{ fontWeight: "bold", marginBottom: "1rem" }}>
                   Fellowship Ministry
                 </Typography>
-                <FormControl
-                  fullWidth
-                  variant="outlined"
-                  sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem" }}
+                <FormControl fullWidth variant="outlined" sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem"  }}>
+                <InputLabel>Ministry</InputLabel>
+                <Select
+                  value={formData.fellowshipMinistryName}
+                  onChange={(e) => handleInputChange("fellowshipMinistryName", e.target.value)}
                 >
-                  <InputLabel>Category</InputLabel>
-                  <Select
-                    value={formData.fellowshipCategory}
-                    onChange={(e) => handleInputChange("fellowshipCategory", e.target.value)}
-                  >
-                    {Object.keys(ministryData["Fellowship Ministry"].categories).map(
-                      (category) => (
-                        <MenuItem key={category} value={category}>
-                          {category}
-                        </MenuItem>
-                      )
-                    )}
-                  </Select>
-                </FormControl>
-                <FormControl
-                  fullWidth
+                  {fellowshipMinistries.map((ministry) => (
+                    <MenuItem key={ministry} value={ministry}>
+                      {ministry}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+                <TextField
+                  label="Role"
                   variant="outlined"
-                  sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem" }}
-                  disabled={!formData.fellowshipCategory}
-                >
-                  <InputLabel>Role</InputLabel>
-                  <Select
-                    value={formData.fellowshipRole}
-                    onChange={(e) => handleInputChange("fellowshipRole", e.target.value)}
-                    disabled={!formData.fellowshipCategory}
-                  >
-                    {ministryData["Fellowship Ministry"].categories[
-                      formData.fellowshipCategory
-                    ]?.map((role) => (
-                      <MenuItem key={role} value={role}>
-                        {role}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                  fullWidth
+                  value={formData.fellowshipRole}
+                  onChange={(e) => handleInputChange("fellowshipRole", e.target.value)}
+                  sx={{ backgroundColor: "#ffffff", marginBottom: "1rem" }}
+                />
+             
               </Grid>
 
               {/* Service Ministry Section */}
@@ -702,43 +736,33 @@ function AddMemberForm({ initialData, onBack, onSuccess }) {
                   Service Ministry
                 </Typography>
                 <FormControl
-                  fullWidth
-                  variant="outlined"
-                  sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem" }}
-                >
-                  <InputLabel>Category</InputLabel>
-                  <Select
-                    value={formData.serviceCategory}
-                    onChange={(e) => handleInputChange("serviceCategory", e.target.value)}
-                  >
-                    {Object.keys(ministryData["Service Ministry"].categories).map((category) => (
-                      <MenuItem key={category} value={category}>
-                        {category}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl
-                  fullWidth
-                  variant="outlined"
-                  sx={{ borderRadius: "8px", backgroundColor: "#ffffff" }}
-                  disabled={!formData.serviceCategory}
-                >
-                  <InputLabel>Role</InputLabel>
-                  <Select
-                    value={formData.serviceRole}
-                    onChange={(e) => handleInputChange("serviceRole", e.target.value)}
-                    disabled={!formData.serviceCategory}
-                  >
-                    {ministryData["Service Ministry"].categories[formData.serviceCategory]?.map(
-                      (role) => (
-                        <MenuItem key={role} value={role}>
-                          {role}
-                        </MenuItem>
-                      )
-                    )}
-                  </Select>
-                </FormControl>
+          fullWidth
+          variant="outlined"
+          sx={{ borderRadius: "8px", backgroundColor: "#ffffff", marginBottom: "1rem" }}
+        >
+          <InputLabel>Ministry</InputLabel>
+          <Select
+            value={formData.serviceMinistryName}
+            onChange={(e) => handleInputChange("serviceMinistryName", e.target.value)}
+            label="Ministry"
+          >
+            {serviceMinistries.map((ministry) => (
+              <MenuItem key={ministry} value={ministry}>
+                {ministry}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        
+        {/* Role as a TextField */}
+        <TextField
+          label="Role"
+          variant="outlined"
+          fullWidth
+          value={formData.serviceRole}
+          onChange={(e) => handleInputChange("serviceRole", e.target.value)}
+          sx={{ backgroundColor: "#ffffff" }}
+        />
               </Grid>
             </Grid>
           </Card>

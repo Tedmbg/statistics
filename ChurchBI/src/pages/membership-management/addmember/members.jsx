@@ -111,21 +111,21 @@ export default function MemberManagement() {
   }
 
   const handleEditMember = async (memberId) => {
-    console.log('Member ID:', memberId)
+    console.log('Member ID:', memberId);
     if (!memberId) {
-      console.error('Member ID is undefined or null.')
-      return
+      console.error('Member ID is undefined or null.');
+      return;
     }
-
+  
     try {
-      const response = await axios.get(`https://statistics-production-032c.up.railway.app/api/members/${memberId}`)
-      const member = response.data
-
-      const nameParts = member.name ? member.name.split(' ') : []
-      const firstName = nameParts[0] || ''
-      const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : ''
-      const lastName = nameParts[nameParts.length - 1] || ''
-
+      const response = await axios.get(`https://statistics-production-032c.up.railway.app/api/members/${memberId}`);
+      const member = response.data;
+  
+      const nameParts = member.name ? member.name.split(' ') : [];
+      const firstName = nameParts[0] || '';
+      const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
+      const lastName = nameParts[nameParts.length - 1] || '';
+  
       const mappedData = {
         firstName,
         middleName,
@@ -142,22 +142,26 @@ export default function MemberManagement() {
         baptized: member.baptized || false,
         discipleshipClassId: member.discipleship_class_id || null,
         completedClass: member.completed_class || false,
-        fellowshipCategory: member.fellowship_ministries || "",
-        serviceCategory: member.service_ministries || "",
         conversionDate: member.conversion_date || '',
         nextOfKinFirstName: member.nextOfKinFirstName || '',
         nextOfKinLastName: member.nextOfKinLastName || '',
         nextOfKinContactInfo: member.nextOfKinContactInfo || '',
-        volunteeringRole: member.volunteering?.role || '',
-      }
-
-      setEditingMember(mappedData)
-      setShowAddMemberForm(true)
+        
+        // Volunteering fields
+        fellowshipMinistryName: member.fellowshipMinistryName || '',
+        fellowshipRole: member.fellowshipRole || '',
+        serviceMinistryName: member.serviceMinistryName || '',
+        serviceRole: member.serviceRole || '',
+      };
+  
+      setEditingMember(mappedData);
+      setShowAddMemberForm(true);
     } catch (error) {
-      console.error('Error fetching member details:', error)
-      alert('Failed to fetch member details. Please try again.')
+      console.error('Error fetching member details:', error);
+      alert('Failed to fetch member details. Please try again.');
     }
-  }
+  };
+  
 
   const handleCancelChange = (memberId) => {
     // Revert the member's role to its original state by refetching
