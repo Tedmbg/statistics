@@ -1883,7 +1883,7 @@ app.post('/api/users/create/test', async (req, res) => {
 
 app.get('/api/members/:id', async (req, res) => {
     const memberId = req.params.id;
-    
+  
     try {
       // Fetch member data
       const memberQuery = 'SELECT * FROM members WHERE member_id = $1';
@@ -1901,12 +1901,42 @@ app.get('/api/members/:id', async (req, res) => {
   
       const nextOfKin = nextOfKinResult.rows[0] || {}; // Use the first result or an empty object if none found
   
-      // Combine member and next of kin data
+      // Fetch volunteering data by joining volunteers and ministries tables
+      const volunteeringQuery = `
+        SELECT m.ministry_name, m.type AS ministry_type, v.role
+        FROM volunteers v
+        JOIN ministries m ON v.ministry_id = m.ministry_id
+        WHERE v.member_id = $1
+      `;
+      const volunteeringResult = await pool.query(volunteeringQuery, [memberId]);
+  
+      // Initialize volunteering fields
+      let fellowshipMinistryName = '';
+      let fellowshipRole = '';
+      let serviceMinistryName = '';
+      let serviceRole = '';
+  
+      // Map the volunteering data to individual fields
+      volunteeringResult.rows.forEach((volunteer) => {
+        if (volunteer.ministry_type === 'Fellowship') {
+          fellowshipMinistryName = volunteer.ministry_name;
+          fellowshipRole = volunteer.role;
+        } else if (volunteer.ministry_type === 'Service') {
+          serviceMinistryName = volunteer.ministry_name;
+          serviceRole = volunteer.role;
+        }
+      });
+  
+      // Combine member, next of kin, and volunteering data
       const responseData = {
         ...member,
         nextOfKinFirstName: nextOfKin.first_name || '',
         nextOfKinLastName: nextOfKin.last_name || '',
         nextOfKinContactInfo: nextOfKin.contact_info || '',
+        fellowshipMinistryName,
+        fellowshipRole,
+        serviceMinistryName,
+        serviceRole,
       };
   
       res.json(responseData); // Send the combined data back to the frontend
@@ -1915,6 +1945,7 @@ app.get('/api/members/:id', async (req, res) => {
       res.status(500).json({ error: 'Error fetching member details' });
     }
   });
+  
 
 
 // Token Validation API
