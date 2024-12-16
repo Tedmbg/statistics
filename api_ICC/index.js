@@ -21,6 +21,7 @@ const app = express();
 app.use(cors({
     origin: ['http://localhost:5173', 'https://statistics-production-032c.up.railway.app'], 
     methods: 'GET,POST,PUT,DELETE', 
+    credentials: true
 }));
 
 // Middleware to parse JSON
@@ -97,6 +98,8 @@ const authenticateAdmin = async (req, res, next) => {
 app.get('/', (req, res) => {
   res.send('API is working!');
 });
+
+app.options('*', cors());
 
 // GET /api/members - Fetch all members with related next of kin and volunteering details
 // app.get('/api/members', async (req, res) => {
@@ -393,6 +396,47 @@ app.get('/api/members', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
+        res.status(500).json({ message: 'Error fetching members' });
+    }
+});
+
+
+app.get('/api/members2', async (req, res) => {
+    const { limit, lastMemberId } = req.query;
+
+    const limitVal = parseInt(limit, 10) || 20; // Default to 20
+    const cursor = lastMemberId ? parseInt(lastMemberId, 10) : null; // Use lastMemberId for cursor-based pagination
+
+    try {
+        let query = `
+            SELECT *
+            FROM members
+            WHERE is_visiting = FALSE
+        `;
+        const params = [];
+
+        // Add cursor-based pagination logic
+        if (cursor) {
+            query += ` AND member_id > $1`;
+            params.push(cursor);
+        }
+
+        query += `
+            ORDER BY member_id ASC
+            LIMIT $${params.length + 1}
+        `;
+        params.push(limitVal);
+
+        console.log('Executing query:', query, params); // Log the query and parameters
+
+        const result = await pool.query(query, params);
+
+        res.json({
+            members: result.rows,
+            hasMore: result.rows.length === limitVal, // Indicate if more rows are available
+        });
+    } catch (error) {
+        console.error('Error fetching members:', error.message);
         res.status(500).json({ message: 'Error fetching members' });
     }
 });
@@ -1713,7 +1757,7 @@ app.get('/api/volunteers/total-count', async (req, res) => {
 });
 
 // Login API with Role Validation
-app.post('/api/users/login', async (req, res) => {
+app.post('/api/users/login', cors(), async (req, res) => {
     const { email, password } = req.body;
 
     // Validate input
@@ -1737,7 +1781,7 @@ app.post('/api/users/login', async (req, res) => {
         const user = userResult.rows[0];
 
         // Check if the user has a valid role
-        const allowedRoles = ['Admin', 'Pastor', 'Leader'];
+        const allowedRoles = ['Admin', 'Pastor', 'Leader', 'usher', 'instructor' ];
         if (!allowedRoles.includes(user.role)) {
             return res.status(403).json({ status: 'error', message: 'Access denied. Invalid role.' });
         }
@@ -1783,7 +1827,7 @@ app.post('/api/users/create', authenticateAdmin, async (req, res) => {
     }
 
     // Validate role
-    const allowedRoles = ['Admin', 'Pastor', 'Leader'];
+    const allowedRoles = ['Admin', 'Pastor', 'Leader', 'usher', 'instructor'];
     if (!allowedRoles.includes(role)) {
         return res.status(403).json({ status: 'error', message: 'Invalid role specified' });
     }
@@ -2009,6 +2053,7 @@ app.get('/api/users/role', (req, res) => {
 // Update User Login (Password Reset) API using Email
 app.put('/api/users/update', authenticateAdmin, async (req, res) => {
     const { email, newPassword } = req.body;
+    res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
 
     // Validate input
     if (!email || !newPassword) {
@@ -2061,7 +2106,7 @@ app.put('/api/users/update', authenticateAdmin, async (req, res) => {
 });
 
 // Get Instructors API
-app.get('/api/instructors', authenticateAdmin, async (req, res) => {
+app.get('/api/instructors', async (req, res) => {
     try {
         // Query to fetch users with the role 'Leader'
         const query = `
