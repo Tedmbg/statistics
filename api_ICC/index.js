@@ -2314,11 +2314,52 @@ app.get('/api/fellowship-ministries/work-status', async (req, res) => {
 });
 
 
+//Fellowship ministries gender-distibution
+app.get('/api/fellowship-ministries/gender-distribution', async (req, res) => {
+    const { year } = req.query; // Optional year filter
+
+    try {
+        const query = `
+            SELECT
+                min.ministry_name,
+                COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::INTEGER AS male_count,
+                COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::INTEGER AS female_count
+            FROM
+                members m
+            JOIN member_ministries mm ON m.member_id = mm.member_id
+            JOIN ministries min ON mm.ministry_id = min.ministry_id
+            WHERE
+                min.type = 'Fellowship' -- Filter only fellowship ministries
+                AND m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Only include members aged 18+
+                ${year ? `AND EXTRACT(YEAR FROM mm.assigned_at) = ${year}` : ''} -- Optional year filter
+            GROUP BY
+                min.ministry_name
+            ORDER BY
+                min.ministry_name;
+        `;
+
+        const result = await pool.query(query);
+
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: year || 'All Years', // Include year or indicate "All Years"
+        });
+    } catch (err) {
+        console.error('Error fetching gender distribution:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
 
 
 
 
 
+
+
+
+// DPO NOT USE OR EVEN LOOK AT: VERY  VERY PROBLEMATIC (DONT TOUCH)
 app.put('/api/members/:id', async (req, res) => {
     const memberId = parseInt(req.params.id, 10);
     const {
