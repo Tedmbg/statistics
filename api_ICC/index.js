@@ -2489,6 +2489,30 @@ app.put('/api/members/:id', async (req, res) => {
         }
 });  
 
+// DELETE API Endpoint
+app.delete('/api/members/:id', async (req, res) => {
+    const { id } = req.params;
+  
+    try {
+      // Validate the ID
+      if (!id) {
+        return res.status(400).json({ error: "Member ID is required" });
+      }
+  
+      // Replace with your database logic to delete a member
+      const deleteResult = await pool.query('DELETE FROM members WHERE id = $1', [id]);
+  
+      if (deleteResult.rowCount === 0) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+  
+      res.status(200).json({ message: "Member deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting member:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
 
 
 // Start the server
