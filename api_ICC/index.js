@@ -2204,6 +2204,171 @@ app.get('/api/fellowship-ministries/overall-gender-ratio', async (req, res) => {
     }
 });
 
+app.get('/api/fellowship-ministries/work-status', async (req, res) => {
+    const { year } = req.query; // the year query parameters
+
+    try {
+        const query = `
+            SELECT
+                min.ministry_name,
+                m.occupation_status,
+                COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::INTEGER AS male_count,
+                COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::INTEGER AS female_count,
+                (COUNT(CASE WHEN m.gender = 'Male' THEN 1 END) + COUNT(CASE WHEN m.gender = 'Female' THEN 1 END))::INTEGER AS total_count
+            FROM
+                members m
+            JOIN member_ministries mm ON m.member_id = mm.member_id
+            JOIN ministries min ON mm.ministry_id = min.ministry_id
+            WHERE
+                min.type = 'Fellowship' -- Only fellowship ministries
+                AND m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Include only members aged 18+
+                ${year ? `AND EXTRACT(YEAR FROM mm.assigned_at) = ${year}` : ''} -- Optional year filter
+            GROUP BY
+                min.ministry_name, m.occupation_status
+            ORDER BY
+                total_count DESC; -- Use total_count for ordering
+        `;
+
+        const result = await pool.query(query);
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: year || 'All Years', // Include year in the response
+        });
+    } catch (err) {
+        console.error('Error fetching work status:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+
+// Felowship-minstries member count per ministry
+app.get('/api/fellowship-ministries', async (req, res) => {
+    const { year } = req.query; //  the year query parameters
+
+    try {
+        const query = `
+            SELECT
+                min.ministry_id,
+                min.ministry_name,
+                min.leader_name AS instructor,
+                COUNT(
+                    CASE 
+                        WHEN m.is_visiting = FALSE 
+                             AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 
+                             ${year ? `AND EXTRACT(YEAR FROM mm.assigned_at) = ${year}` : ''}
+                        THEN m.member_id
+                    END
+                )::INTEGER AS total_members
+            FROM
+                ministries min
+            LEFT JOIN member_ministries mm ON min.ministry_id = mm.ministry_id
+            LEFT JOIN members m ON mm.member_id = m.member_id
+            WHERE
+                min.type = 'Fellowship' -- Only fellowship ministries
+            GROUP BY
+                min.ministry_id, min.ministry_name, min.leader_name
+            ORDER BY
+                min.ministry_id;
+        `;
+
+        const result = await pool.query(query);
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: year || 'All Years', // Include year in the response
+        });
+    } catch (err) {
+        console.error('Error fetching fellowship ministries:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+
+// Fellowship total member count 
+app.get('/api/members-fellowship/total-count', async (req, res) => {
+    const { year } = req.query; // Optional year filter
+
+    try {
+        const query = `
+            SELECT
+                COUNT(*)::INTEGER AS total_members, -- Total count of members
+                COALESCE(json_agg(monthly_count ORDER BY monthly_count.month)::jsonb, '[]'::jsonb) AS monthly_breakdown
+            FROM (
+                SELECT
+                    TO_CHAR(m.membership_date, 'YYYY-MM') AS month, -- Month format as YYYY-MM
+                    COUNT(*)::INTEGER AS count -- Count of members per month
+                FROM
+                    members m
+                WHERE
+                    m.is_visiting = FALSE -- Exclude visiting members
+                    ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''} -- Optional year filter
+                GROUP BY
+                    TO_CHAR(m.membership_date, 'YYYY-MM')
+            ) AS monthly_count;
+        `;
+
+        const result = await pool.query(query);
+
+        res.json({
+            status: 'success',
+            data: {
+                total_members: result.rows[0].total_members,
+                monthly_breakdown: result.rows[0].monthly_breakdown,
+                year: year || 'All Years', // Include year or indicate "All Years"
+            },
+        });
+    } catch (err) {
+        console.error('Error fetching member count:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+app.get('/api/fellowship-ministries/age-distribution', async (req, res) => {
+    const { year } = req.query; //  the year  query parameters
+
+    try {
+        const query = `
+            SELECT
+                min.ministry_name,
+                CASE
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 36 AND 49 THEN '36-49'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) BETWEEN 50 AND 64 THEN '50-64'
+                    WHEN DATE_PART('year', AGE(m.date_of_birth)) >= 65 THEN '65+'
+                END AS age_range,
+                COUNT(m.member_id)::INTEGER AS total
+            FROM
+                members m
+            JOIN member_ministries mm ON m.member_id = mm.member_id
+            JOIN ministries min ON mm.ministry_id = min.ministry_id
+            WHERE
+                min.type = 'Fellowship' -- Only fellowship ministries
+                AND m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Include only members aged 18+
+                ${year ? `AND EXTRACT(YEAR FROM mm.assigned_at) = ${year}` : ''} -- Optional year filter
+            GROUP BY
+                min.ministry_name, age_range
+            ORDER BY
+                min.ministry_name, age_range;
+        `;
+
+        const result = await pool.query(query);
+        res.json({
+            status: 'success',
+            data: result.rows,
+            year: year || 'All Years', // Include year in the response
+        });
+    } catch (err) {
+        console.error('Error fetching age distribution:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
 
 
 // DPO NOT USE OR EVEN LOOK AT: VERY  VERY PROBLEMATIC (DONT TOUCH)
