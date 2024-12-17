@@ -187,7 +187,7 @@ app.options('*', cors());
 // });
 
 // POST /api/members/add - Add a new member
->>>>>>>>> Temporary merge branch 2
+//Temporary merge branch 2
 app.post('/api/members/add', async (req, res) => {
     const {
         sir_name,
@@ -350,12 +350,12 @@ app.post('/api/members/add', async (req, res) => {
     }
 });
 
-<<<<<<<<< Temporary merge branch 1
+// Temporary merge branch 1
 
 
 
 // Get all members
-=========
+
 // Get all members with pagination and optional search
 app.get('/api/members', async (req, res) => {
     try {
