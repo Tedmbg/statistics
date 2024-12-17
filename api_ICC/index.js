@@ -2566,6 +2566,27 @@ app.get('/api/members/:id', async (req, res) => {
   });    
 
 
+  // DELETE /api/members/:id - Delete a specific member
+app.delete('/api/members/:id', async (req, res) => {
+    const { id } = req.params; // Extract member ID from URL params
+  
+    try {
+      // Check if the member exists
+      const checkResult = await pool.query('SELECT * FROM members WHERE member_id = $1', [id]);
+      if (checkResult.rowCount === 0) {
+        return res.status(404).json({ message: 'Member not found' });
+      }
+  
+      // Delete the member from the database
+      await pool.query('DELETE FROM members WHERE member_id = $1', [id]);
+  
+      // Send success response
+      res.status(200).json({ message: 'Member deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting member:', error.message);
+      res.status(500).json({ message: 'Error deleting member' });
+    }
+  });
 
 // Start the server
 app.listen(PORT, () => {
