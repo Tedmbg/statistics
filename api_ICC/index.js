@@ -2601,6 +2601,43 @@ app.get('/api/attendance/class-progress2/:classId', async (req, res) => {
 });
 
 
+//service ministry member count per ministry 
+app.get('/api/service-ministries/member-count', async (req, res) => {
+    try {
+        const query = `
+            SELECT
+                min.ministry_name,
+                COUNT(*)::INTEGER AS total_count,
+                COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::INTEGER AS male_count,
+                COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::INTEGER AS female_count
+            FROM
+                members m
+            JOIN member_ministries mm ON m.member_id = mm.member_id
+            JOIN ministries min ON mm.ministry_id = min.ministry_id
+            WHERE
+                min.type = 'Service' -- Only service ministries
+                AND m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Only members aged 18+
+            GROUP BY
+                min.ministry_name
+            ORDER BY
+                min.ministry_name;
+        `;
+
+        const result = await pool.query(query);
+
+        res.status(200).json({
+            status: 'success',
+            data: result.rows,
+        });
+    } catch (error) {
+        console.error('Error fetching service ministries with member count:', error.message);
+        res.status(500).json({
+            status: 'error',
+            message: 'Internal Server Error',
+        });
+    }
+});
 
 
 
