@@ -2359,7 +2359,255 @@ app.get('/api/fellowship-ministries/age-distribution', async (req, res) => {
 });
 
 
-// DPO NOT USE OR EVEN LOOK AT: VERY  VERY PROBLEMATIC (DONT TOUCH)
+//THE START OF THE ATTENDANCE APIS 
+
+// The classes based on the login user 
+app.get('/api/attendance/classes', async (req, res) => {
+    const leaderId = req.user.userId; 
+
+    try {
+        const query = `
+            SELECT 
+                dc.class_id, 
+                dc.class_name, 
+                dc.class_day, 
+                dc.class_time
+            FROM discipleship_classes dc
+            WHERE dc.instructor = $1
+        `;
+        const result = await pool.query(query, [leaderId]);
+
+        res.json({
+            status: 'success',
+            data: result.rows,
+        });
+    } catch (err) {
+        console.error('Error fetching classes:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+// API to Mark attendance
+
+app.post('/api/attendance/mark', async (req, res) => {
+    const { classId, memberAttendances } = req.body; // { memberId, status }
+    const leaderId = req.user.userId; // Leader taking attendance
+
+    if (!classId || !memberAttendances || !Array.isArray(memberAttendances)) {
+        return res.status(400).json({ status: 'error', message: 'Invalid request data' });
+    }
+
+    try {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Insert or update attendance for each member
+        const attendancePromises = memberAttendances.map(async (attendance) => {
+            const { memberId, status } = attendance;
+
+            if (status === 'Absent') {
+                return pool.query(
+                    `
+                    INSERT INTO attendance (class_id, member_id, date, status, missed_classes_count, taken_by)
+                    VALUES ($1, $2, $3, $4, 1, $5)
+                    ON CONFLICT (class_id, member_id, date) 
+                    DO UPDATE SET 
+                        status = EXCLUDED.status,
+                        missed_classes_count = attendance.missed_classes_count + 1,
+                        taken_by = EXCLUDED.taken_by
+                    `,
+                    [classId, memberId, today, status, leaderId]
+                );
+            } else {
+                return pool.query(
+                    `
+                    INSERT INTO attendance (class_id, member_id, date, status, missed_classes_count, taken_by)
+                    VALUES ($1, $2, $3, $4, 0, $5)
+                    ON CONFLICT (class_id, member_id, date) 
+                    DO UPDATE SET 
+                        status = EXCLUDED.status,
+                        taken_by = EXCLUDED.taken_by
+                    `,
+                    [classId, memberId, today, status, leaderId]
+                );
+            }
+        });
+
+        await Promise.all(attendancePromises);
+
+        res.json({
+            status: 'success',
+            message: 'Attendance recorded successfully',
+        });
+    } catch (err) {
+        console.error('Error recording attendance:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+// API to get the classes members  based on the slected class_id
+app.get('/api/attendance/members/:classId', async (req, res) => {
+    const { classId } = req.params;
+
+    try {
+        const query = `
+            SELECT 
+                m.member_id, 
+                m.name, 
+                a.missed_classes_count,
+                COALESCE(a.status, 'Not Taken') AS status
+            FROM members m
+            LEFT JOIN attendance a ON m.member_id = a.member_id AND a.class_id = $1
+            WHERE m.discipleship_class_id = $1
+        `;
+
+        const result = await pool.query(query, [classId]);
+
+        res.json({
+            status: 'success',
+            data: result.rows,
+        });
+    } catch (err) {
+        console.error('Error fetching members:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+// APi for  class stats-Progress
+app.get('/api/attendance/class-progress/:classId', async (req, res) => {
+    const { classId } = req.params;
+
+    try {
+        // Step 1: Get class details (start_date, end_date, class_day)
+        const classQuery = `
+            SELECT start_date, end_date, class_day
+            FROM discipleship_classes
+            WHERE class_id = $1
+        `;
+        const classResult = await pool.query(classQuery, [classId]);
+
+        if (classResult.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Class not found' });
+        }
+
+        const { start_date, end_date, class_day } = classResult.rows[0];
+        if (!start_date || !end_date || !class_day) {
+            return res.status(400).json({ status: 'error', message: 'Invalid class details' });
+        }
+
+        // Step 2: Calculate total weeks between start_date and end_date
+        const startDate = new Date(start_date);
+        const endDate = new Date(end_date);
+        const millisecondsPerWeek = 7 * 24 * 60 * 60 * 1000;
+
+        const totalWeeks = Math.ceil((endDate - startDate) / millisecondsPerWeek);
+
+        // Step 3: Calculate total possible classes
+        const totalPossibleClasses = totalWeeks * class_day;
+
+        // Step 4: Count distinct attendance dates for the class
+        const attendanceQuery = `
+            SELECT COUNT(DISTINCT date) AS completed_classes
+            FROM attendance
+            WHERE class_id = $1 AND status = 'Present'
+        `;
+        const attendanceResult = await pool.query(attendanceQuery, [classId]);
+        const completedClasses = parseInt(attendanceResult.rows[0]?.completed_classes || 0, 10);
+
+        // Step 5: Calculate completion percentage
+        const completionPercentage = totalPossibleClasses > 0
+            ? ((completedClasses / totalPossibleClasses) * 100).toFixed(2)
+            : 0;
+
+        // Step 6: Return response
+        res.json({
+            status: 'success',
+            data: {
+                total_possible_classes: totalPossibleClasses,
+                completed_classes: completedClasses,
+                completion_percentage: `${completionPercentage}%`
+            }
+        });
+    } catch (err) {
+        console.error('Error fetching class progress:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+
+//Same api as above but for testing
+app.get('/api/attendance/class-progress2/:classId', async (req, res) => {
+    const { classId } = req.params;
+
+    try {
+        // Step 1: Fetch class details
+        const classQuery = `
+            SELECT start_date, end_date, class_day
+            FROM discipleship_classes
+            WHERE class_id = $1
+        `;
+        const classResult = await pool.query(classQuery, [classId]);
+
+        if (classResult.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Class not found' });
+        }
+
+        const { start_date, end_date, class_day } = classResult.rows[0];
+        const startDate = new Date(start_date);
+        const endDate = new Date(end_date);
+
+        // Debugging Logs
+        console.log("Start Date:", startDate);
+        console.log("End Date:", endDate);
+
+        // Step 2: Corrected total possible classes calculation
+        const totalDays = Math.ceil((endDate - startDate) / (24 * 60 * 60 * 1000));
+        const totalWeeks = Math.ceil(totalDays / 7);
+        const totalPossibleClasses = totalWeeks * class_day;
+
+        console.log("Total Days:", totalDays);
+        console.log("Total Weeks:", totalWeeks);
+        console.log("Total Possible Classes:", totalPossibleClasses);
+
+        // Step 3: Count unique attendance dates
+        const attendanceQuery = `
+            SELECT COUNT(DISTINCT date) AS completed_classes
+            FROM attendance
+            WHERE class_id = $1
+        `;
+        const attendanceResult = await pool.query(attendanceQuery, [classId]);
+        const completedClasses = parseInt(attendanceResult.rows[0].completed_classes, 10) || 0;
+
+        console.log("Completed Classes:", completedClasses);
+
+        // Step 4: Calculate percentage progress
+        const completionPercentage = totalPossibleClasses > 0
+            ? ((completedClasses / totalPossibleClasses) * 100).toFixed(2)
+            : '0.00';
+
+        // Step 5: Return the results
+        res.json({
+            status: 'success',
+            data: {
+                total_possible_classes: totalPossibleClasses,
+                completed_classes: completedClasses,
+                completion_percentage: `${completionPercentage}%`
+            }
+        });
+    } catch (error) {
+        console.error('Error calculating class progress:', error.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+
+
+
+
+
+
+// DO NOT USE OR EVEN LOOK AT: VERY  VERY PROBLEMATIC (DONT TOUCH)
 app.put('/api/members/:id', async (req, res) => {
     const memberId = parseInt(req.params.id, 10);
     const {
