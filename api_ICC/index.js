@@ -2583,7 +2583,7 @@ app.delete('/api/members/:id', async (req, res) => {
       // Send success response
       res.status(200).json({ message: 'Member deleted successfully' });
     } catch (error) {
-      console.error('Error deleting member:', error.message);
+      console.error('Error deleting member:',error.message, error.stack);
       res.status(500).json({ message: 'Error deleting member' });
     }
   });
