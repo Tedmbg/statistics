@@ -353,45 +353,33 @@ app.post('/api/members/add', async (req, res) => {
 // Get all members with pagination and optional search
 app.get('/api/members', async (req, res) => {
     try {
-        const { limit, offset, search } = req.query;
-
-        const limitVal = parseInt(limit, 10) || 20;
-        const offsetVal = parseInt(offset, 10) || 0;
+        const { search } = req.query;
 
         let query = 'SELECT * FROM members';
         const values = [];
 
+        // Add search functionality if "search" query is provided
         if (search && search.trim() !== '') {
             query += ' WHERE LOWER(name) LIKE $1';
             values.push(`%${search.toLowerCase()}%`);
         }
 
-        query += ` ORDER BY member_id ASC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
-        values.push(limitVal, offsetVal);
+        // Order the results
+        query += ' ORDER BY name ASC';
 
+        // Execute the query
         const result = await pool.query(query, values);
 
-        // Check if more data exists
-        const hasMoreQuery = `
-            SELECT EXISTS (
-                SELECT 1 FROM members
-                ${search ? 'WHERE LOWER(name) LIKE $1' : ''}
-                OFFSET $2 LIMIT 1
-            ) AS hasMore;
-        `;
-        const hasMoreResult = await pool.query(hasMoreQuery, values.slice(0, search ? 1 : 0).concat(offsetVal + limitVal));
-
-        const hasMore = hasMoreResult.rows[0].hasmore;
-
+        // Send all the results (no pagination)
         res.json({
-            members: result.rows,
-            hasMore,
+            members: result.rows
         });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error fetching members' });
     }
 });
+
 
 
 
