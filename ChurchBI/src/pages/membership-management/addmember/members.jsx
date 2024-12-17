@@ -18,7 +18,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import AddMemberForm from '../addmember/AddMember'
-import InfiniteScroll from 'react-infinite-scroll-component'
 
 const roles = ["Admin", "Member", "Leader worship", "Leader traffic"]
 
@@ -32,68 +31,44 @@ export default function MemberManagement() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [updatedMembers, setUpdatedMembers] = useState(new Set());
   const [hoveredRow, setHoveredRow] = useState(null);
+  const [totalMembers, setTotalMembers] = useState(0);
 
-  // New state variables for infinite scrolling
-  const [hasMore, setHasMore] = useState(true)
-  const [currentOffset, setCurrentOffset] = useState(0)
-  const [limit] = useState(20) // Number of members to fetch per request
-  const [totalMembers, setTotalMembers] = useState(0)
-  const [isInitialLoading, setIsInitialLoading] = useState(true)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   // Fetch members function
-  const fetchMembers = async (offset = 0, limitVal = 20, search = '') => {
+  const fetchMembers = async (search = '') => {
     try {
       const response = await axios.get('https://statistics-production-032c.up.railway.app/api/members', {
-        params: {
-          limit: limitVal,
-          offset: offset,
-          search: search.trim() !== '' ? search : undefined,
-        },
-      })
-      console.log("API Response:", response.data)
-
-      const { members: fetchedMembers, total } = response.data
-
+        params: { search: search.trim() || undefined },
+      });
+  
+      const { members: fetchedMembers } = response.data;
+  
       // Process members to split the name
       const processedMembers = fetchedMembers.map(member => {
-        const nameParts = member.name.split(' ')
+        const nameParts = member.name.split(' ');
         return {
-          id: member.member_id, // Ensure correct mapping of the ID
+          id: member.member_id,
           firstName: nameParts[0] || '',
           middleName: nameParts[1] || '',
           lastName: nameParts.slice(2).join(' ') || '',
           ...member,
-        }
-      })
-
-      // Append new members to the existing list
-      setMembers(prev => [...prev, ...processedMembers])
-      setTotalMembers(total)
-      setCurrentOffset(prev => prev + fetchedMembers.length)
-
-      // Determine if there's more data to load
-      if (currentOffset + fetchedMembers.length >= total) {
-        setHasMore(false)
-      }
+        };
+      });
+  
+      // Set all members at once
+      setMembers(processedMembers);
+      setTotalMembers(processedMembers.length); 
     } catch (error) {
-      console.error('Error fetching members:', error)
-    } finally {
-      setIsInitialLoading(false)
-      setIsLoadingMore(false)
+      console.error('Error fetching members:', error);
     }
-  }
+  };
+  
 
   // Initial fetch and when searchTerm changes
   useEffect(() => {
-    // Reset states when search term changes
-    setMembers([])
-    setHasMore(true)
-    setCurrentOffset(0)
-    setTotalMembers(0)
-    setIsInitialLoading(true)
-    fetchMembers(0, limit, searchTerm)
-  }, [searchTerm, limit])
+    fetchMembers(searchTerm); // Fetch members whenever searchTerm changes
+  }, [searchTerm]);
+  
 
   const handleRoleChange = (memberId, newRole) => {
     setMembers(prevMembers => prevMembers.map(member => 
@@ -241,12 +216,7 @@ export default function MemberManagement() {
             setShowAddMemberForm(false)
           } : null}
           onSuccess={() => {
-            // Optionally, you can reset the member list or append the new member
-            setMembers([])
-            setHasMore(true)
-            setCurrentOffset(0)
-            setTotalMembers(0)
-            fetchMembers(0, limit, searchTerm)
+            fetchMembers(searchTerm)
           }}
         />
       </div>
@@ -280,28 +250,6 @@ export default function MemberManagement() {
         </div>
 
         {/* Members Table with Infinite Scroll */}
-        <InfiniteScroll
-          dataLength={members.length}
-          next={() => {
-            setIsLoadingMore(true)
-            fetchMembers(currentOffset, limit, searchTerm)
-          }}
-          hasMore={hasMore}
-          loader={
-            <div className="flex justify-center items-center my-4">
-              <svg className="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-              </svg>
-              <span className="ml-2">Loading...</span>
-            </div>
-          }
-          endMessage={
-            <p className="text-center text-gray-600 mt-4">
-              {members.length === 0 ? "No members found." : "You have seen all members."}
-            </p>
-          }
-        >
           <Table>
             <TableHeader>
               <TableRow>
@@ -357,7 +305,6 @@ export default function MemberManagement() {
               ))}
             </TableBody>
           </Table>
-        </InfiniteScroll>
       </div>
 
       {/* Unsaved Changes Submit Button */}
@@ -376,12 +323,7 @@ export default function MemberManagement() {
                 await axios.put('https://statistics-production-032c.up.railway.app/api/members/update', { updates })
                 setHasUnsavedChanges(false) // Reset unsaved changes after submission
                 setUpdatedMembers(new Set()) // Clear updated members
-                // Optionally, re-fetch members to ensure data consistency
-                setMembers([])
-                setHasMore(true)
-                setCurrentOffset(0)
-                setTotalMembers(0)
-                fetchMembers(0, limit, searchTerm)
+                  fetchMembers(searchTerm)
               } catch (error) {
                 console.error('Error submitting changes:', error)
                 alert('Failed to submit changes. Please try again.')
