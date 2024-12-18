@@ -1167,6 +1167,94 @@ app.get('/api/fellowship-members-per-month', async (req, res) => {
     }
 });
 
+// API  to get all the users that are leaders
+app.get('/api/users/leaders', async (req, res) => {
+    try {
+        const query = `
+            SELECT user_id, username AS leader_name
+            FROM users
+            WHERE role = 'Leader'
+            ORDER BY username ASC;
+        `;
+
+        const result = await pool.query(query);
+
+        res.status(200).json({
+            status: 'success',
+            data: result.rows,
+        });
+    } catch (error) {
+        console.error('Error fetching leaders:', error.message);
+        res.status(500).json({
+            status: 'error',
+            message: 'Internal Server Error',
+        });
+    }
+});
+
+
+// ministry cretaion API 
+app.post('/api/ministries/create', async (req, res) => {
+    const {
+        ministry_name,
+        leader_user_id,
+        description,
+        meeting_schedule,
+        type,
+        leader_name,
+    } = req.body;
+
+    try {
+        // Validate required fields
+        if (!ministry_name || !leader_user_id || !type) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Ministry name, leader user ID, and type are required fields.',
+            });
+        }
+
+        // Step 1: Fetch the current maximum ministry_id and increment by 1
+        const ministryIdResult = await pool.query(
+            'SELECT COALESCE(MAX(ministry_id), 0) + 1 AS next_id FROM ministries'
+        );
+        const nextMinistryId = ministryIdResult.rows[0].next_id;
+
+        // Step 2: Insert the new ministry into the database
+        const query = `
+            INSERT INTO ministries (
+                ministry_id, ministry_name, leader_user_id, description, meeting_schedule, type, leader_name, creation_date
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+            RETURNING *;
+        `;
+
+        const values = [
+            nextMinistryId,         // Auto-generated ministry_id
+            ministry_name,          // Ministry name
+            leader_user_id,         // Leader user ID
+            description || null,    // Optional description
+            meeting_schedule || null, // Optional meeting schedule
+            type,                   // Ministry type
+            leader_name || null,    // Optional leader name
+        ];
+
+        // Step 3: Execute the query
+        const result = await pool.query(query, values);
+
+        res.status(201).json({
+            status: 'success',
+            message: 'Ministry created successfully',
+            data: result.rows[0],
+        });
+    } catch (error) {
+        console.error('Error creating ministry:', error.message);
+        res.status(500).json({
+            status: 'error',
+            message: 'Internal Server Error',
+        });
+    }
+});
+
+
 
 // Age distribution based on completed and not completed discipleship classes
 app.get('/api/members/age-distribution-dis', async (req, res) => {
@@ -1440,6 +1528,134 @@ app.get('/api/service-ministries/work-status', async (req, res) => {
     }
 });
 
+// Service ministries Gender Ratio 
+app.get('/api/service-ministries/gender-ratio', async (req, res) => {
+    try {
+        const query = `
+            SELECT
+                COUNT(*)::INTEGER AS total_count,
+                COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::INTEGER AS male_count,
+                COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::INTEGER AS female_count
+            FROM
+                members m
+            JOIN member_ministries mm ON m.member_id = mm.member_id
+            JOIN ministries min ON mm.ministry_id = min.ministry_id
+            WHERE
+                min.type = 'Service' -- Filter only service ministries
+                AND m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18; -- Only include members aged 18+
+        `;
+
+        const result = await pool.query(query);
+
+        const { total_count, male_count, female_count } = result.rows[0];
+
+        // Calculate gender ratios
+        const male_ratio = total_count > 0 ? ((male_count / total_count) * 100).toFixed(2) : '0.00';
+        const female_ratio = total_count > 0 ? ((female_count / total_count) * 100).toFixed(2) : '0.00';
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                total_count,
+                male_count,
+                female_count,
+                male_ratio: `${male_ratio}%`,
+                female_ratio: `${female_ratio}%`
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching service ministries gender ratio:', error.message);
+        res.status(500).json({
+            status: 'error',
+            message: 'Internal Server Error',
+        });
+    }
+});
+
+// Service ministry member count 
+
+app.get('/api/service-ministries/member-count-by-month', async (req, res) => {
+    const { year } = req.query; // Optional year filter
+
+    try {
+        const query = `
+            SELECT
+                min.ministry_name,
+                EXTRACT(YEAR FROM m.membership_date)::INTEGER AS year,
+                EXTRACT(MONTH FROM m.membership_date)::INTEGER AS month,
+                COUNT(*)::INTEGER AS total_count,
+                COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::INTEGER AS male_count,
+                COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::INTEGER AS female_count
+            FROM
+                members m
+            JOIN member_ministries mm ON m.member_id = mm.member_id
+            JOIN ministries min ON mm.ministry_id = min.ministry_id
+            WHERE
+                min.type = 'Service' -- Filter only service ministries
+                AND m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Only include members aged 18+
+                ${year ? `AND EXTRACT(YEAR FROM m.membership_date) = ${year}` : ''} -- Optional year filter
+            GROUP BY
+                min.ministry_name, year, month
+            ORDER BY
+                year, month, min.ministry_name;
+        `;
+
+        const result = await pool.query(query);
+
+        res.status(200).json({
+            status: 'success',
+            data: result.rows,
+        });
+    } catch (error) {
+        console.error('Error fetching service ministries member count by month:', error.message);
+        res.status(500).json({
+            status: 'error',
+            message: 'Internal Server Error',
+        });
+    }
+});
+
+
+
+//service ministry member count per ministry 
+app.get('/api/service-ministries/member-count', async (req, res) => {
+    try {
+        const query = `
+            SELECT
+                min.ministry_name,
+                COUNT(*)::INTEGER AS total_count,
+                COUNT(CASE WHEN m.gender = 'Male' THEN 1 END)::INTEGER AS male_count,
+                COUNT(CASE WHEN m.gender = 'Female' THEN 1 END)::INTEGER AS female_count
+            FROM
+                members m
+            JOIN member_ministries mm ON m.member_id = mm.member_id
+            JOIN ministries min ON mm.ministry_id = min.ministry_id
+            WHERE
+                min.type = 'Service' -- Only service ministries
+                AND m.is_visiting = FALSE -- Exclude visiting members
+                AND DATE_PART('year', AGE(m.date_of_birth)) >= 18 -- Only members aged 18+
+            GROUP BY
+                min.ministry_name
+            ORDER BY
+                min.ministry_name;
+        `;
+
+        const result = await pool.query(query);
+
+        res.status(200).json({
+            status: 'success',
+            data: result.rows,
+        });
+    } catch (error) {
+        console.error('Error fetching service ministries with member count:', error.message);
+        res.status(500).json({
+            status: 'error',
+            message: 'Internal Server Error',
+        });
+    }
+});
 
 
 // update the discipleship-classes end-date 
@@ -2192,6 +2408,8 @@ app.get('/api/fellowship-ministries/overall-gender-ratio', async (req, res) => {
     }
 });
 
+
+//fellowship work status 
 app.get('/api/fellowship-ministries/work-status', async (req, res) => {
     const { year } = req.query; // the year query parameters
 
@@ -2599,7 +2817,6 @@ app.get('/api/attendance/class-progress2/:classId', async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
-
 
 
 
