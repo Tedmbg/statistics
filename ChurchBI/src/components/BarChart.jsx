@@ -1,4 +1,4 @@
-// components/BarChart.js
+// src/components/BarChart.js
 import {
   Card,
   Typography,
@@ -7,51 +7,67 @@ import {
   FormControl,
   InputLabel,
 } from "@mui/material";
-import { useState } from "react";
 import { Bar } from "react-chartjs-2";
 
-const BarChart = ({ data, options, title, height = 545, onDateChange }) => {
-  const [selectedDate, setSelectedDate] = useState("2024");
+const BarChart = ({
+  data,
+  options,
+  title,
+  height = 545,
+  onDateChange,
+  selectedYear, // Renamed from selectedDate to selectedYear
+}) => {
+  // Default to current year if not provided
+  const currentYear = new Date().getFullYear();
+  const displayYear = typeof selectedYear === "number" ? selectedYear : currentYear;
 
   const handleDateChange = (event) => {
-    const newDate = event.target.value;
-    setSelectedDate(newDate);
+    const newYear = parseInt(event.target.value, 10);
     if (onDateChange) {
-      onDateChange(newDate); // Inform parent of the change
+      onDateChange(newYear); // Pass the correctly defined variable
     }
   };
 
   return (
-    <Card
-      sx={{ padding: "1.5rem", backgroundColor: "#fff", boxShadow: "none" }}
-    >
+    <Card sx={{ padding: "1.5rem", backgroundColor: "#fff", boxShadow: "none" }}>
       {title && (
         <Typography variant="h6" gutterBottom>
           {title}
         </Typography>
       )}
 
-      {/* Date Selector */}
-      <div style={{display:"flex",justifyContent:"flex-end"}}>
+      {/* Year Selector */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <FormControl sx={{ width: "120px", marginBottom: "1rem" }}>
-          <InputLabel id="date-select-label">Year</InputLabel>
+          <InputLabel id="year-select-label">Year</InputLabel>
           <Select
-            labelId="date-select-label"
-            value={selectedDate}
+            labelId="year-select-label"
+            value={displayYear} // Use displayYear for the Select's value
             onChange={handleDateChange}
             label="Year"
             size="small"
           >
-            {/* Add desired year options */}
-            <MenuItem value="2024">2024</MenuItem>
-            <MenuItem value="2023">2023</MenuItem>
-            <MenuItem value="2016">2016</MenuItem>
+            {Array.from({ length: 10 }, (_, i) => {
+              const year = currentYear - i;
+              return (
+                <MenuItem key={year} value={year}>
+                  {year}
+                </MenuItem>
+              );
+            })}
           </Select>
         </FormControl>
       </div>
 
       <div style={{ height }}>
-        <Bar data={data} options={options} />
+        {/* Ensure data and options are defined to prevent errors */}
+        {data && options ? (
+          <Bar data={data} options={options} />
+        ) : (
+          <Typography align="center" mt={4}>
+            No data available.
+          </Typography>
+        )}
       </div>
     </Card>
   );

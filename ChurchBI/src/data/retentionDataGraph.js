@@ -1,17 +1,27 @@
-// fetchRetentionData.js
+// src/data/fetchRetentionData.js
 import axios from "axios";
 import moment from "moment"; // For date formatting
 
-// Existing function to fetch retention data for the chart
-const fetchRetentionData = async () => {
+// Base API URL
+const BASE_API_URL = "https://statistics-production-032c.up.railway.app/api";
+
+// Function to build URL with query parameters
+const buildUrl = (endpoint, params = {}) => {
+  const url = new URL(`${BASE_API_URL}/${endpoint}`);
+  Object.keys(params).forEach((key) =>
+    url.searchParams.append(key, params[key])
+  );
+  return url.toString();
+};
+
+// Fetch retention data with year parameter
+const fetchRetentionData = async (year) => {
   try {
-    const response = await axios.get(
-      "https://statistics-production-032c.up.railway.app/api/retention-rate"
-    );
+    const response = await axios.get(buildUrl("retention-rate", { year }));
 
     const apiData = response.data.data; // Access the 'data' array
 
-    console.log(apiData); // Verify the data
+    console.log("Retention Data:", apiData); // Verify the data
 
     // Process the data for the chart
     const formattedData = {
@@ -47,12 +57,10 @@ const fetchRetentionData = async () => {
   }
 };
 
-// Function to fetch 'Just Visiting' data
-const fetchJustVisiting = async () => {
+// Fetch 'Just Visiting' data with year parameter
+const fetchJustVisiting = async (year) => {
   try {
-    const response = await axios.get(
-      "https://statistics-production-032c.up.railway.app/api/just-visiting"
-    );
+    const response = await axios.get(buildUrl("just-visiting", { year }));
 
     const totalVisitors = response.data.data.total_visitors;
     return totalVisitors;
@@ -62,12 +70,10 @@ const fetchJustVisiting = async () => {
   }
 };
 
-// New function to fetch average retention rate
-const fetchAverageRetentionRate = async () => {
+// Fetch average retention rate with year parameter
+const fetchAverageRetentionRate = async (year) => {
   try {
-    const response = await axios.get(
-      "https://statistics-production-032c.up.railway.app/api/retention-rate"
-    );
+    const response = await axios.get(buildUrl("retention-rate", { year }));
 
     const apiData = response.data.data;
 
@@ -89,12 +95,10 @@ const fetchAverageRetentionRate = async () => {
   }
 };
 
-// New function to fetch gender ratio
-const fetchGenderRatio = async () => {
+// Fetch gender ratio with year parameter
+const fetchGenderRatio = async (year) => {
   try {
-    const response = await axios.get(
-      "https://statistics-production-032c.up.railway.app/api/retention-rate"
-    );
+    const response = await axios.get(buildUrl("retention-rate", { year }));
 
     const apiData = response.data.data;
 
@@ -122,9 +126,66 @@ const fetchGenderRatio = async () => {
   }
 };
 
+// Fetch age distribution data with year parameter
+const fetchAgeDistributionData = async (year) => {
+  try {
+    const apiUrl = buildUrl("members/age-distribution-dis", { year });
+
+    const response = await axios.get(apiUrl);
+    return response.data.data; // This is an array of objects as shown in the sample
+  } catch (error) {
+    console.error("Error fetching age distribution data:", error);
+    throw new Error("Failed to fetch age distribution data");
+  }
+};
+
+// Fetch work status data with year parameter
+const fetchWorkStatusData = async (year) => {
+  try {
+    const apiUrl = buildUrl("members/work-status-dis", { year });
+
+    const response = await axios.get(apiUrl);
+    const apiData = response.data.data;
+
+    // Prepare data for the chart
+    const formattedData = {
+      labels: apiData.map((item) => item.occupation_status),
+      datasets: [
+        {
+          label: "Male Completed",
+          data: apiData.map((item) => item.male_completed_count || 0),
+          backgroundColor: "rgba(54, 162, 235, 0.7)",
+        },
+        {
+          label: "Female Completed",
+          data: apiData.map((item) => item.female_completed_count || 0),
+          backgroundColor: "rgba(255, 99, 132, 0.7)",
+        },
+        {
+          label: "Male Not Completed",
+          data: apiData.map((item) => item.male_not_completed_count || 0),
+          backgroundColor: "rgba(54, 162, 235, 0.3)",
+        },
+        {
+          label: "Female Not Completed",
+          data: apiData.map((item) => item.female_not_completed_count || 0),
+          backgroundColor: "rgba(255, 99, 132, 0.3)",
+        },
+      ],
+    };
+
+    return formattedData;
+  } catch (error) {
+    console.error("Error fetching work status data:", error);
+    throw new Error("Failed to fetch work status data");
+  }
+};
+
 export {
   fetchRetentionData,
   fetchJustVisiting,
   fetchAverageRetentionRate,
   fetchGenderRatio,
+  fetchWorkStatusData,
+  fetchAgeDistributionData,
 };

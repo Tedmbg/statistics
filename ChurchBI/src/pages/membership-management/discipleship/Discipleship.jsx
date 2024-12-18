@@ -1,5 +1,5 @@
 // Discipleship.jsx
-import  { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Grid,
@@ -11,6 +11,11 @@ import {
   InputAdornment,
   MenuItem,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
   Snackbar,
   Alert,
 } from "@mui/material";
@@ -26,6 +31,7 @@ import { createClass } from "../../../data/createClass";
 import {
   fetchDiscipleshipClasses,
   fetchMonthlyCompletedStats,
+  fetchInstructors,
 } from "../../../data/discipleship";
 
 import axios from "axios";
@@ -46,13 +52,34 @@ const generateClassName = async () => {
 export default function Discipleship() {
   // State for form data
   const [formData, setFormData] = useState({
-    class_name: "", // Initialize as empty string
+    class_name: "", // Initialize with an empty string or default value
     instructor: "",
     creation_date: "",
     end_date: "",
-    description: "", // Ensure this is handled if required
     type: "Virtual",
+    start_time: "", // Add a field for start time
+    end_time: "", // Add a field for end time
+    class_day: "",
   });
+
+  const [instructors, setInstructors] = useState([]); // State to hold instructors
+  const [loadingInstructors, setLoadingInstructors] = useState(true); // Loading state for instructors
+
+  // Fetch instructors when the component mounts
+  useEffect(() => {
+    const loadInstructors = async () => {
+      try {
+        const instructorData = await fetchInstructors();
+        setInstructors(instructorData); // Set the fetched instructors
+      } catch (error) {
+        console.error("Error fetching instructors:", error);
+      } finally {
+        setLoadingInstructors(false); // Stop loading
+      }
+    };
+
+    loadInstructors();
+  }, []);
 
   const [loadingClassName, setLoadingClassName] = useState(true);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
@@ -71,10 +98,17 @@ export default function Discipleship() {
   const [error, setError] = useState(null); // Error state for classes
 
   // State for bar chart data
-  const [barChartData, setBarChartData] = useState({});
+  const [barChartData, setBarChartData] = useState({
+    labels: [],
+    datasets: [],
+  });
+
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear()); // Default to current year
   const [loadingStats, setLoadingStats] = useState(true); // Loader state for stats
   const [errorStats, setErrorStats] = useState(null); // Error state for stats
+
+  // State for confirmation dialog
+  const [openConfirm, setOpenConfirm] = useState(false);
 
   // Fetch generated class name on component mount
   useEffect(() => {
@@ -115,9 +149,8 @@ export default function Discipleship() {
     const loadMonthlyStats = async () => {
       setLoadingStats(true);
       try {
-        const data = await fetchMonthlyCompletedStats(selectedYear); // Fetch stats based on selectedYear
+        const data = await fetchMonthlyCompletedStats(selectedYear);
 
-        // Transform the data for the bar chart
         const months = [
           "Jan",
           "Feb",
@@ -132,8 +165,8 @@ export default function Discipleship() {
           "Nov",
           "Dec",
         ];
-        const maleData = new Array(12).fill(0);
-        const femaleData = new Array(12).fill(0);
+        const maleData = Array(12).fill(0);
+        const femaleData = Array(12).fill(0);
 
         data.forEach((item) => {
           const monthIndex = new Date(`${item.month}-01`).getMonth();
@@ -157,6 +190,7 @@ export default function Discipleship() {
           ],
         });
       } catch (err) {
+        console.error("Failed to load monthly completed stats:", err);
         setErrorStats("Failed to load monthly completed stats.");
       } finally {
         setLoadingStats(false);
@@ -183,14 +217,63 @@ export default function Discipleship() {
     }));
   };
 
-  // Handle form submission
-  const handleSubmit = async () => {
+  // Handle form submission (opens confirmation dialog)
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setSubmitError(null); // Reset any previous errors
+
+    // Basic Validation (optional but recommended)
+    if (
+      !formData.creation_date ||
+      !formData.end_date ||
+      !formData.start_time ||
+      !formData.end_time ||
+      !formData.type ||
+      !formData.instructor
+    ) {
+      setSubmitError("Please fill in all required fields.");
+      setSnackbarMessage("Please fill in all required fields.");
+      console.log(formData);
+      
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    // Open the confirmation dialog
+    setOpenConfirm(true);
+  };
+
+  // Handle confirmation of submission
+  const handleConfirm = async () => {
+    setOpenConfirm(false);
     setLoadingSubmit(true);
     setSubmitError(null); // Reset previous errors
-    try {
-      console.log("Submitting Form Data:", formData); // Log formData for debugging
 
-      const result = await createClass(formData);
+    try {
+      console.log("Submitting Form Data:", formData); // Debugging
+
+      if (formData.start_time >= formData.end_time) {
+        setSnackbarMessage("Start time must be earlier than end time.");
+        setSnackbarSeverity("error");
+        setOpenSnackbar(true);
+        setLoadingSubmit(false);
+        return;
+      }
+
+      // Combine start_time and end_time into class_time
+      const combinedClassTime = `${formData.start_time} - ${formData.end_time}`;
+
+      // Prepare the data to send
+      const dataToSend = {
+        ...formData,
+        class_time: combinedClassTime, // Add the combined class_time
+      };
+
+      delete dataToSend.start_time; // Remove the original start_time field
+      delete dataToSend.end_time; // Remove the original end_time field
+
+      const result = await createClass(dataToSend); // Send the modified data
       console.log("Class created successfully:", result);
 
       // Show success message
@@ -205,8 +288,10 @@ export default function Discipleship() {
         instructor: "",
         creation_date: "",
         end_date: "",
-        description: "",
         type: "Virtual",
+        start_time: "",
+        end_time: "",
+        class_day: 0,
       });
 
       // Reset search query to show all classes after adding a new class
@@ -229,6 +314,11 @@ export default function Discipleship() {
     } finally {
       setLoadingSubmit(false);
     }
+  };
+
+  // Handle cancellation of submission
+  const handleCancel = () => {
+    setOpenConfirm(false);
   };
 
   // Handle Snackbar close
@@ -313,15 +403,34 @@ export default function Discipleship() {
 
             {/* Facilitator */}
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Facilitator"
-                variant="outlined"
-                name="instructor"
-                value={formData.instructor}
-                onChange={handleChange}
-                sx={{ backgroundColor: "#FFFFFF" }}
-              />
+              {loadingInstructors ? (
+                <Box
+                  display="flex"
+                  justifyContent="center"
+                  alignItems="center"
+                  height={56}
+                >
+                  <CircularProgress size={24} />
+                </Box>
+              ) : (
+                <TextField
+                  fullWidth
+                  label="Facilitator"
+                  variant="outlined"
+                  name="instructor"
+                  value={formData.instructor}
+                  onChange={handleChange}
+                  select // Turn TextField into a dropdown
+                  sx={{ backgroundColor: "#FFFFFF" }}
+                >
+                  {/* Map instructors to menu items */}
+                  {instructors.map((instructor) => (
+                    <MenuItem key={instructor.user_id} value={instructor.username}>
+                      {instructor.username}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
             </Grid>
 
             {/* Creation Date */}
@@ -354,6 +463,36 @@ export default function Discipleship() {
               />
             </Grid>
 
+            {/* Start Time */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Start Time"
+                variant="outlined"
+                type="time" // Use "time" input type for time selection
+                name="start_time" // Unique name for this field
+                value={formData.start_time} // Bind to formData.start_time
+                onChange={handleChange} // Use the same handler to update state
+                InputLabelProps={{ shrink: true }}
+                sx={{ backgroundColor: "#FFFFFF" }}
+              />
+            </Grid>
+
+            {/* End Time */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="End Time"
+                variant="outlined"
+                type="time" // Use "time" input type for time selection
+                name="end_time" // Unique name for this field
+                value={formData.end_time} // Bind to formData.end_time
+                onChange={handleChange} // Use the same handler to update state
+                InputLabelProps={{ shrink: true }}
+                sx={{ backgroundColor: "#FFFFFF" }}
+              />
+            </Grid>
+
             {/* Type */}
             <Grid item xs={12} sm={6}>
               <TextField
@@ -367,7 +506,30 @@ export default function Discipleship() {
                 sx={{ backgroundColor: "#FFFFFF" }}
               >
                 <MenuItem value="Virtual">Virtual</MenuItem>
-                <MenuItem value="In-person">In-person</MenuItem>
+                <MenuItem value="Physical">Physical</MenuItem>
+              </TextField>
+            </Grid>
+
+            {/* Number of Sessions */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="class_days"
+                variant="outlined"
+                name="class_day" // Ensure this matches the formData key
+                value={formData.sessions} // Bind to formData.sessions
+                onChange={handleChange} // Use the same handler to update state
+                select // Enable dropdown functionality
+                sx={{ backgroundColor: "#FFFFFF" }}
+              >
+                {/* Options for 1 to 7 */}
+                {Array.from({ length: 7 }, (_, index) => index + 1).map(
+                  (value) => (
+                    <MenuItem key={value} value={value}>
+                      {value}
+                    </MenuItem>
+                  )
+                )}
               </TextField>
             </Grid>
 
@@ -391,12 +553,48 @@ export default function Discipleship() {
                 }}
               >
                 {loadingSubmit ? (
-                  <CircularProgress size={20} color="inherit" />
+                  <Box display="flex" alignItems="center">
+                    <CircularProgress size={20} color="inherit" />
+                    <Typography sx={{ marginLeft: "0.5rem" }}>Adding...</Typography>
+                  </Box>
                 ) : (
                   "Add Class"
                 )}
               </Button>
             </Grid>
+
+            {/* Confirmation Dialog */}
+            <Dialog
+              open={openConfirm}
+              onClose={handleCancel}
+              aria-labelledby="confirm-dialog-title"
+              aria-describedby="confirm-dialog-description"
+            >
+              <DialogTitle id="confirm-dialog-title">Confirm Submission</DialogTitle>
+              <DialogContent>
+                <DialogContentText id="confirm-dialog-description">
+                  Are you sure you want to submit the following data?
+                </DialogContentText>
+                <Box mt={2}>
+                  <Typography variant="subtitle1"><strong>Class Name:</strong> {formData.class_name}</Typography>
+                  <Typography variant="subtitle1"><strong>Facilitator:</strong> {formData.instructor}</Typography>
+                  <Typography variant="subtitle1"><strong>Creation Date:</strong> {formData.creation_date}</Typography>
+                  <Typography variant="subtitle1"><strong>End Date:</strong> {formData.end_date}</Typography>
+                  <Typography variant="subtitle1"><strong>Start Time:</strong> {formData.start_time}</Typography>
+                  <Typography variant="subtitle1"><strong>End Time:</strong> {formData.end_time}</Typography>
+                  <Typography variant="subtitle1"><strong>Type:</strong> {formData.type}</Typography>
+                  <Typography variant="subtitle1"><strong>Number of Sessions:</strong> {formData.sessions}</Typography>
+                </Box>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleCancel} color="primary">
+                  Cancel
+                </Button>
+                <Button onClick={handleConfirm} color="primary" autoFocus>
+                  Confirm
+                </Button>
+              </DialogActions>
+            </Dialog>
           </Grid>
         </Grid>
 
@@ -434,7 +632,12 @@ export default function Discipleship() {
             <Box>
               {/* Show loading state */}
               {loading ? (
-                <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                <Box
+                  display="flex"
+                  justifyContent="center"
+                  alignItems="center"
+                  height="100%"
+                >
                   <CircularProgress size={24} />
                 </Box>
               ) : error ? (
@@ -453,7 +656,8 @@ export default function Discipleship() {
                         {classData.class_name}
                       </Typography>
                       <Typography variant="body2" color="textSecondary">
-                        {classData.instructor} - {classData.total_members} members
+                        {classData.instructor} - {classData.total_members}{" "}
+                        members
                       </Typography>
                     </Box>
                   </Box>
@@ -484,13 +688,18 @@ export default function Discipleship() {
               <Typography color="error" align="center" mt={4}>
                 {errorStats}
               </Typography>
-            ) : (
+            ) : barChartData.labels.length > 0 &&
+              barChartData.datasets.length > 0 ? (
               <BarChart
                 data={barChartData}
                 options={barChartOptions}
                 title="Completed Discipleship"
                 onDateChange={handleDateChange}
               />
+            ) : (
+              <Typography align="center" mt={4}>
+                No data available.
+              </Typography>
             )}
           </Card>
         </Grid>

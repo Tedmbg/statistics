@@ -1,11 +1,6 @@
-// RetentionRate.jsx
+// src/pages/RetentionRate.jsx
 import { useEffect, useState } from "react";
-import {
-  Box,
-  Card,
-  Typography,
-  Grid,
-} from "@mui/material";
+import { Box, Card, Typography, Grid } from "@mui/material";
 import {
   Chart as ChartJS,
   BarElement,
@@ -15,17 +10,18 @@ import {
   Tooltip,
   Title,
 } from "chart.js";
-import BarChart from "../../../components/BarChart"; // Import the BarChart component
-import DoughnutC from "../../../components/DoughnutC"; // Import your custom DoughnutC component
+import BarChart from "../../../components/BarChart";
+import DoughnutC from "../../../components/DoughnutC";
+import CircularProgress from "@mui/material/CircularProgress";
 
-// Import JSON data
-import ageData from "../../../data/ageDataRetention.json";
-import workStatusData from "../../../data/workStatusDataRetention.json";
+// Import your existing fetching functions
 import {
   fetchRetentionData,
   fetchJustVisiting,
   fetchAverageRetentionRate,
   fetchGenderRatio,
+  fetchWorkStatusData,
+  fetchAgeDistributionData,
 } from "../../../data/retentionDataGraph";
 
 // Register Chart.js components
@@ -39,9 +35,6 @@ ChartJS.register(
 );
 
 function RetentionRate() {
-  // Prepare data and options for the charts
-
-  //barchart
   const [retentionBarData, setRetentionBarData] = useState(null);
   const [justVisiting, setJustVisiting] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -49,36 +42,158 @@ function RetentionRate() {
   const [averageRetentionRate, setAverageRetentionRate] = useState(null);
   const [malePercentage, setMalePercentage] = useState(null);
   const [femalePercentage, setFemalePercentage] = useState(null);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  // States for donuts
+  const [ageCompletedData, setAgeCompletedData] = useState(null);
+  const [ageIncompleteData, setAgeIncompleteData] = useState(null);
+  const [workStatusCompletedData, setWorkStatusCompletedData] = useState(null);
+  const [workStatusIncompleteData, setWorkStatusIncompleteData] =
+    useState(null);
 
   useEffect(() => {
     const getData = async () => {
       try {
-        const retentionData = await fetchRetentionData(); // Fetch dynamic data
+        const retentionData = await fetchRetentionData(selectedYear);
         setRetentionBarData(retentionData);
 
-        const visitorData = await fetchJustVisiting(); // fetch just visiting data
+        const visitorData = await fetchJustVisiting(selectedYear); // Pass selectedYear
         setJustVisiting(visitorData);
 
-        const avgRetention = await fetchAverageRetentionRate();
+        const avgRetention = await fetchAverageRetentionRate(selectedYear);
         setAverageRetentionRate(avgRetention);
 
-        //fetch gender ratio
-        const genderRatio = await fetchGenderRatio();
+        const genderRatio = await fetchGenderRatio(selectedYear);
         setMalePercentage(genderRatio.malePercentage);
         setFemalePercentage(genderRatio.femalePercentage);
 
+        // Fetch age distribution data
+        const ageData = await fetchAgeDistributionData(selectedYear);
+        // Aggregate age data: completed vs incomplete by age_range
+        const ageRanges = Array.from(new Set(ageData.map((d) => d.age_range)));
+
+        const ageCompletedCounts = ageRanges.map((ar) => {
+          const items = ageData.filter((d) => d.age_range === ar);
+          const completed = items.reduce(
+            (sum, i) =>
+              sum +
+              (i.male_completed_count || 0) +
+              (i.female_completed_count || 0),
+            0
+          );
+          return completed;
+        });
+
+        const ageIncompleteCounts = ageRanges.map((ar) => {
+          const items = ageData.filter((d) => d.age_range === ar);
+          const incomplete = items.reduce(
+            (sum, i) =>
+              sum +
+              (i.male_not_completed_count || 0) +
+              (i.female_not_completed_count || 0),
+            0
+          );
+          return incomplete;
+        });
+
+        // Create donut data for Age (Completed and Incomplete)
+        const ageCompletedDonutData = {
+          labels: ageRanges,
+          datasets: [
+            {
+              data: ageCompletedCounts,
+              backgroundColor: ["#4CAF50", "#F44336", "#FF9800", "#2196F3"],
+            },
+          ],
+        };
+
+        const ageIncompleteDonutData = {
+          labels: ageRanges,
+          datasets: [
+            {
+              data: ageIncompleteCounts,
+              backgroundColor: ["#4CAF50", "#F44336", "#FF9800", "#2196F3"],
+            },
+          ],
+        };
+
+        setAgeCompletedData(ageCompletedDonutData);
+        setAgeIncompleteData(ageIncompleteDonutData);
+
+        // Fetch Work Status Data
+        const wsData = await fetchWorkStatusData(selectedYear);
+        // wsData contains { labels: [...], datasets: [...] }
+        // Aggregate completed vs incomplete for each occupation_status
+        const occupationStatuses = wsData.labels;
+
+        // Assuming datasets order:
+        // 0: Male Completed, 1: Female Completed, 2: Male Not Completed, 3: Female Not Completed
+        const maleCompletedArr = wsData.datasets[0].data;
+        const femaleCompletedArr = wsData.datasets[1].data;
+        const maleNotCompletedArr = wsData.datasets[2].data;
+        const femaleNotCompletedArr = wsData.datasets[3].data;
+
+        const wsCompletedCounts = occupationStatuses.map(
+          (_, idx) =>
+            (maleCompletedArr[idx] || 0) + (femaleCompletedArr[idx] || 0)
+        );
+
+        const wsIncompleteCounts = occupationStatuses.map(
+          (_, idx) =>
+            (maleNotCompletedArr[idx] || 0) + (femaleNotCompletedArr[idx] || 0)
+        );
+
+        // "Work Status Completed" donut
+        const workStatusCompletedDonutData = {
+          labels: occupationStatuses,
+          datasets: [
+            {
+              data: wsCompletedCounts,
+              backgroundColor: [
+                "#4CAF50",
+                "#F44336",
+                "#FF9800",
+                "#2196F3",
+                "#9C27B0",
+              ],
+            },
+          ],
+        };
+
+        // "Work Status Incomplete" donut
+        const workStatusIncompleteDonutData = {
+          labels: occupationStatuses,
+          datasets: [
+            {
+              data: wsIncompleteCounts,
+              backgroundColor: [
+                "#4CAF50",
+                "#F44336",
+                "#FF9800",
+                "#2196F3",
+                "#9C27B0",
+              ],
+            },
+          ],
+        };
+
+        setWorkStatusCompletedData(workStatusCompletedDonutData);
+        setWorkStatusIncompleteData(workStatusIncompleteDonutData);
+
         setLoading(false);
       } catch (err) {
+        console.error(err);
         setError("Failed to load retention data");
         setLoading(false);
       }
     };
 
     getData();
-  }, []);
+  }, [selectedYear]); // Re-fetch data when selectedYear changes
 
-  // test if data is going to be sent.
-  console.log("Retention Bar Data:", retentionBarData);
+  const handleDateChange = (newYear) => {
+    setSelectedYear(newYear);
+  };
 
   const retentionBarOptions = {
     responsive: true,
@@ -92,55 +207,19 @@ function RetentionRate() {
       y: {
         stacked: true,
         beginAtZero: true,
-        max: 100, // Maximum value for percentage
+        max: 100,
         ticks: {
-          callback: function (value) {
-            return value + "%";
-          },
+          callback: (value) => `${value}%`,
         },
         title: { display: true, text: "Retention Rate (%)" },
       },
     },
   };
 
-  const ageDoughnutData = {
-    labels: ["18 - 25", "26 - 32", "33 - 45", "45+"],
-    datasets: [
-      {
-        label: "Age Distribution",
-        data: ageData,
-        backgroundColor: ["#ffbb28", "#ff8042", "#0088fe", "#00c49f"],
-      },
-    ],
-  };
-
-  const ageDoughnutOptions = {
+  const donutOptions = {
     responsive: true,
     plugins: {
-      title: { display: true, text: "Age Distribution" },
-      tooltip: { enabled: true },
-      legend: {
-        position: "bottom",
-      },
-    },
-    cutout: "70%",
-  };
-
-  const workStatusDoughnutData = {
-    labels: ["Employed", "Unemployed"],
-    datasets: [
-      {
-        label: "Work Status",
-        data: workStatusData,
-        backgroundColor: ["#8884d8", "#82ca9d"],
-      },
-    ],
-  };
-
-  const workStatusDoughnutOptions = {
-    responsive: true,
-    plugins: {
-      title: { display: true, text: "Work Status" },
+      title: { display: false },
       tooltip: { enabled: true },
       legend: {
         position: "bottom",
@@ -157,7 +236,7 @@ function RetentionRate() {
 
       {/* Top Row Cards */}
       <Grid container spacing={2}>
-        {/* First Card */}
+        {/* Total Members */}
         <Grid item xs={12} md={3}>
           <Card
             sx={{
@@ -171,20 +250,20 @@ function RetentionRate() {
               alignItems: "center",
             }}
           >
-            {/* Replace with your actual image path */}
             <img
-              src="assets/total members.png"
+              src="src/assets/total_members.png" // Updated path to use absolute path
               alt="Total Members"
               style={{ height: "2.5rem", width: "2.5rem" }}
             />
             <Typography variant="h6" align="center">
               Total Number of Members in Discipleship Class
             </Typography>
-            <Typography variant="h3">120</Typography>
+            <Typography variant="h3">120</Typography>{" "}
+            {/* Replace with dynamic data if available */}
           </Card>
         </Grid>
 
-        {/* Second Card */}
+        {/* Gender Ratio */}
         <Grid item xs={12} md={3}>
           <Card
             sx={{
@@ -206,7 +285,7 @@ function RetentionRate() {
             >
               <Box textAlign="center">
                 <img
-                  src="/assets/male_avatar.png"
+                  src="/assets/male_avatar.png" // Updated path
                   alt="Male Members"
                   style={{ height: "50px", width: "50px" }}
                 />
@@ -222,7 +301,7 @@ function RetentionRate() {
               </Box>
               <Box textAlign="center">
                 <img
-                  src="/assets/female_avatar.png"
+                  src="/assets/female_avatar.png" // Updated path
                   alt="Female Members"
                   style={{ height: "50px", width: "50px" }}
                 />
@@ -240,7 +319,7 @@ function RetentionRate() {
           </Card>
         </Grid>
 
-        {/* Third Card */}
+        {/* Average Retention Rate */}
         <Grid item xs={12} md={3}>
           <Card
             sx={{
@@ -254,7 +333,8 @@ function RetentionRate() {
               alignItems: "center",
             }}
           >
-            <img src="/assets/retationrate.png" alt="Retention Rate" />
+            <img src="src/assets/retention_rate.png" alt="Retention Rate" />{" "}
+            {/* Corrected image path */}
             <Typography variant="h6">Average Retention Rate</Typography>
             {loading ? (
               <Typography variant="h6">Loading...</Typography>
@@ -268,7 +348,7 @@ function RetentionRate() {
           </Card>
         </Grid>
 
-        {/* Fourth Card */}
+        {/* Just Visiting */}
         <Grid item xs={12} md={3}>
           <Card
             sx={{
@@ -283,7 +363,7 @@ function RetentionRate() {
             }}
           >
             <img
-              src="public/assets/visitor.png"
+              src="/assets/visitor.png" // Corrected path to use absolute path
               alt="Just Visiting"
               style={{ height: "2.5rem", width: "2.5rem" }}
             />
@@ -301,12 +381,11 @@ function RetentionRate() {
         </Grid>
       </Grid>
 
-      {/* Additional spacing between the top cards and the rest */}
       <Box my={4} />
 
       <Grid container spacing={2}>
         {/* Retention Rate Chart */}
-        <Grid item xs={12} md={12}>
+        <Grid item xs={12}>
           <Card
             sx={{
               padding: "1.5rem",
@@ -315,7 +394,7 @@ function RetentionRate() {
             }}
           >
             {loading ? (
-              <Typography>Loading...</Typography>
+              <CircularProgress />
             ) : error ? (
               <Typography color="error">{error}</Typography>
             ) : (
@@ -323,59 +402,65 @@ function RetentionRate() {
                 data={retentionBarData}
                 options={retentionBarOptions}
                 title="Retention Rate"
-                height={"41.9895rem"} // Adjust height if needed
+                onDateChange={handleDateChange}
+                selectedYear={selectedYear} // Pass selectedYear as a prop
+                height={"41.9895rem"}
               />
             )}
           </Card>
         </Grid>
 
-
-        {/* Age Distribution Donut Chart and Work Status Donut Chart */}
+        {/* Donut Charts */}
         <Grid item xs={12} md={12}>
           <Grid container spacing={2}>
-            {/* Age Distribution */}
+            {/* Age Incomplete */}
             <Grid item xs={6}>
               <Card
                 sx={{
                   padding: "1rem",
                   textAlign: "center",
                   backgroundColor: "#FFF",
-                  display: "flex", // Enable flex layout
-                  flexDirection: "column", // Stack children vertically
-                  justifyContent: "center", // Center children vertically
-                  alignItems: "center", // Center children horizontally
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
                 }}
               >
                 <Typography variant="h6" mb={2}>
-                  Age incomplete
+                  Age Incomplete
                 </Typography>
-                <DoughnutC
-                  data={ageDoughnutData}
-                  options={ageDoughnutOptions}
-                />
+                {loading || !ageIncompleteData ? (
+                  <Typography>Loading...</Typography>
+                ) : (
+                  <DoughnutC data={ageIncompleteData} options={donutOptions} />
+                )}
               </Card>
             </Grid>
 
-            {/* Work Status incomplete */}
+            {/* Work Status Incomplete */}
             <Grid item xs={6}>
               <Card
                 sx={{
                   padding: "1rem",
                   textAlign: "center",
                   backgroundColor: "#FFF",
-                  display: "flex", // Enable flex layout
-                  flexDirection: "column", // Stack children vertically
-                  justifyContent: "center", // Center children vertically
-                  alignItems: "center", // Center children horizontally
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
                 }}
               >
                 <Typography variant="h6" mb={2}>
-                  Work Status incomplete
+                  Work Status Incomplete
                 </Typography>
-                <DoughnutC
-                  data={workStatusDoughnutData}
-                  options={workStatusDoughnutOptions}
-                />
+                {loading || !workStatusIncompleteData ? (
+                  <Typography>Loading...</Typography>
+                ) : (
+                  <DoughnutC
+                    data={workStatusIncompleteData}
+                    options={donutOptions}
+                  />
+                )}
               </Card>
             </Grid>
 
@@ -395,18 +480,11 @@ function RetentionRate() {
                 <Typography variant="h6" mb={2}>
                   Age Completed
                 </Typography>
-                <DoughnutC
-                  data={{
-                    labels: ["Completed", "Incomplete"],
-                    datasets: [
-                      {
-                        data: [40, 10], // Replace with your data
-                        backgroundColor: ["#4CAF50", "#F44336"], // Green and Red
-                      },
-                    ],
-                  }}
-                  options={ageDoughnutOptions}
-                />
+                {loading || !ageCompletedData ? (
+                  <Typography>Loading...</Typography>
+                ) : (
+                  <DoughnutC data={ageCompletedData} options={donutOptions} />
+                )}
               </Card>
             </Grid>
 
@@ -426,18 +504,14 @@ function RetentionRate() {
                 <Typography variant="h6" mb={2}>
                   Work Status Completed
                 </Typography>
-                <DoughnutC
-                  data={{
-                    labels: ["Completed", "Incomplete"],
-                    datasets: [
-                      {
-                        data: [60, 20], // Replace with your data
-                        backgroundColor: ["#4CAF50", "#F44336"], // Green and Red
-                      },
-                    ],
-                  }}
-                  options={workStatusDoughnutOptions}
-                />
+                {loading || !workStatusCompletedData ? (
+                  <Typography>Loading...</Typography>
+                ) : (
+                  <DoughnutC
+                    data={workStatusCompletedData}
+                    options={donutOptions}
+                  />
+                )}
               </Card>
             </Grid>
           </Grid>
