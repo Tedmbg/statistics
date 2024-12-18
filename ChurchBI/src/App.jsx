@@ -2,7 +2,8 @@
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import { useContext } from "react";
 import { AuthProvider, AuthContext } from "./context/AuthContext";
-import './index.css'
+import './index.css';
+
 // Layout
 import RootLayout from "./layouts/RootLayout";
 

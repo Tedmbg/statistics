@@ -84,6 +84,7 @@ export default function MemberManagement() {
     }
   }
 
+
   // Initial fetch and when searchTerm changes
   useEffect(() => {
     // Reset states when search term changes

@@ -248,7 +248,7 @@ export default function Demographics() {
         <Box style={boxStyle} sx={{ width: "100%", height: "600px" }}>
           <StackedBar
             data={demographicData.countryOfOrigin}
-            title="Country of Origin"
+            title="County of Origin"
           />
         </Box>
 
