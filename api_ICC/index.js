@@ -1167,6 +1167,94 @@ app.get('/api/fellowship-members-per-month', async (req, res) => {
     }
 });
 
+// API  to get all the users that are leaders
+app.get('/api/users/leaders', async (req, res) => {
+    try {
+        const query = `
+            SELECT user_id, username AS leader_name
+            FROM users
+            WHERE role = 'Leader'
+            ORDER BY username ASC;
+        `;
+
+        const result = await pool.query(query);
+
+        res.status(200).json({
+            status: 'success',
+            data: result.rows,
+        });
+    } catch (error) {
+        console.error('Error fetching leaders:', error.message);
+        res.status(500).json({
+            status: 'error',
+            message: 'Internal Server Error',
+        });
+    }
+});
+
+
+// ministry cretaion API 
+app.post('/api/ministries/create', async (req, res) => {
+    const {
+        ministry_name,
+        leader_user_id,
+        description,
+        meeting_schedule,
+        type,
+        leader_name,
+    } = req.body;
+
+    try {
+        // Validate required fields
+        if (!ministry_name || !leader_user_id || !type) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Ministry name, leader user ID, and type are required fields.',
+            });
+        }
+
+        // Step 1: Fetch the current maximum ministry_id and increment by 1
+        const ministryIdResult = await pool.query(
+            'SELECT COALESCE(MAX(ministry_id), 0) + 1 AS next_id FROM ministries'
+        );
+        const nextMinistryId = ministryIdResult.rows[0].next_id;
+
+        // Step 2: Insert the new ministry into the database
+        const query = `
+            INSERT INTO ministries (
+                ministry_id, ministry_name, leader_user_id, description, meeting_schedule, type, leader_name, creation_date
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+            RETURNING *;
+        `;
+
+        const values = [
+            nextMinistryId,         // Auto-generated ministry_id
+            ministry_name,          // Ministry name
+            leader_user_id,         // Leader user ID
+            description || null,    // Optional description
+            meeting_schedule || null, // Optional meeting schedule
+            type,                   // Ministry type
+            leader_name || null,    // Optional leader name
+        ];
+
+        // Step 3: Execute the query
+        const result = await pool.query(query, values);
+
+        res.status(201).json({
+            status: 'success',
+            message: 'Ministry created successfully',
+            data: result.rows[0],
+        });
+    } catch (error) {
+        console.error('Error creating ministry:', error.message);
+        res.status(500).json({
+            status: 'error',
+            message: 'Internal Server Error',
+        });
+    }
+});
+
+
 
 // Age distribution based on completed and not completed discipleship classes
 app.get('/api/members/age-distribution-dis', async (req, res) => {
