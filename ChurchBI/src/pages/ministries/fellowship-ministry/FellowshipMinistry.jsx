@@ -386,7 +386,7 @@ function FellowshipMinistry() {
             }}
           >
             <img
-              src="src/assets/total_volunteers.png"
+              src="src/assets/total_members.png"
               alt="Total Volunteers"
               style={{
                 height: "2.5rem",
@@ -395,7 +395,7 @@ function FellowshipMinistry() {
               }}
             />
             <Typography variant="h6" align="center">
-              Total Number of Volunteers
+              Total Number of Ministries
             </Typography>
             <Typography variant="h3">120</Typography>
           </Card>

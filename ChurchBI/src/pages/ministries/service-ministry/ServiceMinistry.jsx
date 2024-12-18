@@ -144,7 +144,7 @@ export default function Dashboard() {
           >
             <img src="assets/total members.png" alt="Total Members" />
             <Typography variant="h6">
-              Total Number of Members Volunteers
+              Total Number of Members in service ministry
             </Typography>
             <Typography variant="h3">120</Typography>
           </Card>
