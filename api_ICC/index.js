@@ -2579,9 +2579,17 @@ app.get('/api/fellowship-ministries/age-distribution', async (req, res) => {
 
 //THE START OF THE ATTENDANCE APIS 
 
+
+
 // The classes based on the login user 
+// API to fetch classes for a specific leader
+// API to fetch classes for a specific leader
 app.get('/api/attendance/classes', async (req, res) => {
-    const leaderId = req.user.userId; 
+    const { userId } = req.query; // userId passed dynamically via query parameter
+
+    if (!userId) {
+        return res.status(400).json({ status: 'error', message: 'User ID is required' });
+    }
 
     try {
         const query = `
@@ -2591,9 +2599,10 @@ app.get('/api/attendance/classes', async (req, res) => {
                 dc.class_day, 
                 dc.class_time
             FROM discipleship_classes dc
-            WHERE dc.instructor = $1
+            WHERE dc.instructor_id = $1
         `;
-        const result = await pool.query(query, [leaderId]);
+
+        const result = await pool.query(query, [userId]);
 
         res.json({
             status: 'success',
@@ -2604,6 +2613,8 @@ app.get('/api/attendance/classes', async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
+
+
 
 // API to Mark attendance
 
@@ -2661,6 +2672,62 @@ app.post('/api/attendance/mark', async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
+
+// Same as above just try and see which works 
+app.post('/api/attendance/mark2', async (req, res) => {
+    const { classId, userId, memberAttendances } = req.body; // userId passed dynamically
+
+    if (!classId || !userId || !memberAttendances || !Array.isArray(memberAttendances)) {
+        return res.status(400).json({ status: 'error', message: 'Invalid request data' });
+    }
+
+    try {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Insert or update attendance for each member
+        const attendancePromises = memberAttendances.map(async (attendance) => {
+            const { memberId, status } = attendance;
+
+            if (status === 'Absent') {
+                return pool.query(
+                    `
+                    INSERT INTO attendance (class_id, member_id, date, status, missed_classes_count, taken_by)
+                    VALUES ($1, $2, $3, $4, 1, $5)
+                    ON CONFLICT (class_id, member_id, date) 
+                    DO UPDATE SET 
+                        status = EXCLUDED.status,
+                        missed_classes_count = attendance.missed_classes_count + 1,
+                        taken_by = EXCLUDED.taken_by
+                    `,
+                    [classId, memberId, today, status, userId]
+                );
+            } else {
+                return pool.query(
+                    `
+                    INSERT INTO attendance (class_id, member_id, date, status, missed_classes_count, taken_by)
+                    VALUES ($1, $2, $3, $4, 0, $5)
+                    ON CONFLICT (class_id, member_id, date) 
+                    DO UPDATE SET 
+                        status = EXCLUDED.status,
+                        taken_by = EXCLUDED.taken_by
+                    `,
+                    [classId, memberId, today, status, userId]
+                );
+            }
+        });
+
+        await Promise.all(attendancePromises);
+
+        res.json({
+            status: 'success',
+            message: 'Attendance recorded successfully',
+        });
+    } catch (err) {
+        console.error('Error recording attendance:', err.message);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
 
 // API to get the classes members  based on the slected class_id
 app.get('/api/attendance/members/:classId', async (req, res) => {
