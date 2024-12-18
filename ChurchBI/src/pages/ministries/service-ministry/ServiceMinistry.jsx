@@ -77,7 +77,6 @@ export default function Dashboard() {
             },
           ],
         };
-
         // Set State
         setAgeData(formattedAgeData);
         setWorkStatusData(formattedWorkData);
@@ -91,6 +90,16 @@ export default function Dashboard() {
 
     fetchData();
   }, []);
+
+  const defaultChartData = {
+    labels: ["Label1", "Label2", "Label3"],
+    datasets: [
+      {
+        data: [10, 20, 30], // Data points
+        backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56"], // Colors for each slice
+      },
+    ],
+  };
 
   useEffect(() => {
     const loadServiceMinistries = async () => {
@@ -266,7 +275,7 @@ export default function Dashboard() {
                 {error}
               </Typography>
             ) : (
-              <DoughnutC data={ageData} />
+              <DoughnutC data={ageData || defaultChartData} />
             )}
           </Card>
         </Grid>
@@ -286,7 +295,7 @@ export default function Dashboard() {
                 {error}
               </Typography>
             ) : (
-              <DoughnutC data={workStatusData} />
+              <DoughnutC data={workStatusData || defaultChartData} />
             )}
           </Card>
         </Grid>
@@ -313,7 +322,7 @@ export default function Dashboard() {
                   <Avatar
                     sx={{ width: 36, height: 36, bgcolor: "#e0e0e0", mr: 2 }}
                   >
-                    {ministry.ministryName?.charAt(0)?.toUpperCase() || "?"}
+                    {ministry.ministry_name?.charAt(0)?.toUpperCase() || "?"}
                   </Avatar>
                   <Box>
                     <Typography variant="body1" fontWeight="bold">
