@@ -8,6 +8,7 @@ const AGE_DISTRIBUTION_API = "https://statistics-production-032c.up.railway.app/
 const WORK_STATUS_API = "https://statistics-production-032c.up.railway.app/api/fellowship-ministries/work-status";
 const GENDER_DISTRIBUTION_API = "https://statistics-production-032c.up.railway.app/api/fellowship-ministries/overall-gender-ratio";
 const FELLOWSHIP_MINISTRIES_LIST = "https://statistics-production-032c.up.railway.app/api/fellowship-ministries";
+// const FELLOWSHIP_TOTAL_NUMBER = "https://statistics-production-032c.up.railway.app/api/ministries/count";
 
 
 /**

@@ -41,3 +41,17 @@ export const fetchWorkStatus = async (year = null) => {
     throw error;
   }
 };
+// 
+// fetch members per mininistry
+export const fetchMemberPerMinistry = async (year = null) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/api/service-ministries/member-count`, {
+      params: { year }, // Send year as a query parameter
+    });
+    return response.data; // Return API response data
+  } catch (error) {
+    console.error("Error fetching member data:", error);
+    throw error;
+  }
+};
+

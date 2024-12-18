@@ -8,7 +8,22 @@ import {
   fetchAgeDistribution,
   fetchServiceMinistries,
   fetchWorkStatus,
+  fetchMemberPerMinistry,
 } from "./service";
+
+// chatbar options
+const barChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  scales: {
+    x: { stacked: true },
+    y: {
+      stacked: true,
+      beginAtZero: true,
+      title: { display: true, text: "Number of Members" },
+    },
+  },
+};
 
 export default function Dashboard() {
   const [serviceMinistries, setServiceMinistries] = useState([]); // State for storing ministries
@@ -16,6 +31,9 @@ export default function Dashboard() {
   const [workStatusData, setWorkStatusData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [totalMembers,setTotalMembers]=useState([]);
+  const [barChartData, setBarChartData] = useState(null);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -105,8 +123,9 @@ export default function Dashboard() {
     const loadServiceMinistries = async () => {
       try {
         const response = await fetchServiceMinistries();
-        console.log("Fetched Ministries Data:", response); // Log the data
+        // console.log("Fetched Ministries Data:", response); // Log the data
         setServiceMinistries(response.data); // Set the ministries
+        setTotalMembers(response.data.reduce((sum, ministry) => sum + ministry.total_members, 0))
       } catch (err) {
         console.error("Error loading service ministries:", err);
         setError("Failed to load service ministries.");
@@ -116,6 +135,43 @@ export default function Dashboard() {
     };
 
     loadServiceMinistries();
+  }, []);
+
+  useEffect(() => {
+    const loadServiceMinistriesMembers = async () => {
+      try {
+        const response = await fetchMemberPerMinistry();
+        console.log("Fetched MinistriesMember Data:", response); // Log the data
+        const labels = response.data.map((item) => item.ministry_name);
+        const maleData = response.data.map((item) => item.male_count);
+        const femaleData = response.data.map((item) => item.female_count);
+
+        const barChartDat = {
+        labels: labels, // Ministry names
+        datasets: [
+          {
+            label: "Male",
+            data: maleData,
+            backgroundColor: "#78BFF1", // Blue for males
+          },
+          {
+            label: "Female",
+            data: femaleData,
+            backgroundColor: "#FF94AB", // Purple for females
+          },
+        ],
+        };
+
+        setBarChartData(barChartDat)
+
+          } catch (err) {
+            console.error("Error loading service ministries:", err);
+            setError("Failed to load service ministries.");
+          } finally {
+            setLoading(false);
+          }
+        };
+    loadServiceMinistriesMembers();
   }, []);
 
   return (
@@ -146,7 +202,7 @@ export default function Dashboard() {
             <Typography variant="h6">
               Total Number of Members in service ministry
             </Typography>
-            <Typography variant="h3">120</Typography>
+            <Typography variant="h3">{totalMembers}</Typography>
           </Card>
         </Grid>
 
@@ -220,43 +276,30 @@ export default function Dashboard() {
           >
             <img src="public/assets/visitor.png" alt="Just Visiting" />
             <Typography variant="h6">Total number of ministries</Typography>
-            <Typography variant="h3">107</Typography>
+            <Typography variant="h3">{serviceMinistries.length|0}</Typography>
           </Card>
         </Grid>
       </Grid>
 
       {/* Attendance Bar Chart */}
-      <Box
-        mb={3}
-        height={800}
-        sx={{
-          display: "flex",
-          gap: 3,
-          backgroundColor: "#fff",
-          marginTop: "1.5rem",
-        }}
-      >
-        {/* Left Side: Attendance and Bar Chart */}
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h6" mb={1}>
-            Attendance
-          </Typography>
-          <BarChart
-            // data={}
-            options={{
-              responsive: true,
-              scales: {
-                x: { stacked: true }, // Enable stacking on the x-axis
-                y: {
-                  stacked: true, // Enable stacking on the y-axis
-                  beginAtZero: true,
-                },
-              },
-            }}
-            height={600}
-          />
-        </Box>
-      </Box>
+      <Grid marginTop={6} marginBottom={6}>
+        <Card sx={{ height: 730 }}>
+          {loading ? (
+            <Typography textAlign="center">Loading...</Typography>
+          ) : error ? (
+            <Typography textAlign="center" color="error">
+              {error}
+            </Typography>
+          ) : (
+            <BarChart
+              data={barChartData}
+              options={barChartOptions}
+              title="Number of Members"
+            />
+          )}
+        </Card>
+      </Grid>
+
 
       {/* Donut Charts */}
       <Grid container spacing={2}>

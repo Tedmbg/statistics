@@ -112,8 +112,8 @@ function FellowshipMinistry() {
           fetchFellowshipWorkStatus(),
         ]);
 
-        console.log("Age Distribution:", ageDistribution);
-        console.log("Work Status:", workStatus);
+        // console.log("Age Distribution:", ageDistribution);
+        // console.log("Work Status:", workStatus);
 
         // Safeguard against undefined or null
         const ageDataArray = Array.isArray(ageDistribution)
@@ -222,6 +222,7 @@ function FellowshipMinistry() {
 
     loadMinistries();
   }, []);
+  // console.log(ministries)
 
   if (loading) {
     return (
@@ -397,7 +398,7 @@ function FellowshipMinistry() {
             <Typography variant="h6" align="center">
               Total Number of Ministries
             </Typography>
-            <Typography variant="h3">120</Typography>
+            <Typography variant="h3">{ministries.length}</Typography>
           </Card>
         </Grid>
       </Grid>
