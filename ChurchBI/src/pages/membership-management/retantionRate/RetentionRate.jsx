@@ -5,11 +5,6 @@ import {
   Card,
   Typography,
   Grid,
-  Avatar,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
 } from "@mui/material";
 import {
   Chart as ChartJS,
@@ -26,7 +21,6 @@ import DoughnutC from "../../../components/DoughnutC"; // Import your custom Dou
 // Import JSON data
 import ageData from "../../../data/ageDataRetention.json";
 import workStatusData from "../../../data/workStatusDataRetention.json";
-import discipleshipClasses from "../../../data/discipleshipClasses.json";
 import {
   fetchRetentionData,
   fetchJustVisiting,
@@ -55,11 +49,12 @@ function RetentionRate() {
   const [averageRetentionRate, setAverageRetentionRate] = useState(null);
   const [malePercentage, setMalePercentage] = useState(null);
   const [femalePercentage, setFemalePercentage] = useState(null);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear()); // Default to current year
 
   useEffect(() => {
     const getData = async () => {
       try {
-        const retentionData = await fetchRetentionData(); // Fetch dynamic data
+        const retentionData = await fetchRetentionData(selectedYear); // Fetch dynamic data
         setRetentionBarData(retentionData);
 
         const visitorData = await fetchJustVisiting(); // fetch just visiting data
@@ -81,10 +76,18 @@ function RetentionRate() {
     };
 
     getData();
-  }, []);
+  }, [selectedYear]);
 
   // test if data is going to be sent.
   console.log("Retention Bar Data:", retentionBarData);
+
+  const handleDateChange = (newDate) => {
+    // Implement data fetching based on the newDate
+    // For example:
+    // const updatedData = fetchDataForYear(newDate);
+    // setBarChartData(updatedData);
+    setSelectedYear(newDate);
+  };
 
   const retentionBarOptions = {
     responsive: true,
@@ -98,11 +101,9 @@ function RetentionRate() {
       y: {
         stacked: true,
         beginAtZero: true,
-        max: 100, // Maximum value for percentage
+        max: 100,
         ticks: {
-          callback: function (value) {
-            return value + "%";
-          },
+          callback: (value) => `${value}%`,
         },
         title: { display: true, text: "Retention Rate (%)" },
       },
@@ -312,14 +313,8 @@ function RetentionRate() {
 
       <Grid container spacing={2}>
         {/* Retention Rate Chart */}
-        <Grid item xs={12} md={8}>
-          <Card
-            sx={{
-              padding: "1.5rem",
-              backgroundColor: "#fff",
-              boxShadow: "none",
-            }}
-          >
+        <Grid item xs={12}>
+          <Card sx={{ padding: "1.5rem", backgroundColor: "#fff", boxShadow: "none" }}>
             {loading ? (
               <Typography>Loading...</Typography>
             ) : error ? (
@@ -329,51 +324,17 @@ function RetentionRate() {
                 data={retentionBarData}
                 options={retentionBarOptions}
                 title="Retention Rate"
+                onDateChange={handleDateChange} // Pass year change handler
                 height={"41.9895rem"} // Adjust height if needed
               />
             )}
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
-          {/* Discipleship classes */}
-          <Card sx={{ padding: "1.5rem", backgroundColor: "#fff" }}>
-            <Typography variant="h6">Discipleship Classes</Typography>
-            <List>
-              {discipleshipClasses.map((item, index) => (
-                <ListItem key={index} sx={{ paddingLeft: 0, paddingRight: 0 }}>
-                  <ListItemAvatar>
-                    <Avatar src={item.avatar} alt={item.leaderName} />
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={
-                      <Typography variant="body1" fontWeight="bold">
-                        {item.className}
-                      </Typography>
-                    }
-                    secondary={
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="space-between"
-                      >
-                        <Typography variant="body2">
-                          {item.leaderName}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          {item.label}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Card>
-        </Grid>
+
 
         {/* Age Distribution Donut Chart and Work Status Donut Chart */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={12}>
           <Grid container spacing={2}>
             {/* Age Distribution */}
             <Grid item xs={6}>
@@ -398,7 +359,7 @@ function RetentionRate() {
               </Card>
             </Grid>
 
-            {/* Work Status */}
+            {/* Work Status incomplete */}
             <Grid item xs={6}>
               <Card
                 sx={{
