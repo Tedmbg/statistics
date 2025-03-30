@@ -19,7 +19,7 @@ const app = express();
 
 // Configure CORS
 app.use(cors({
-    origin: ['http://localhost:5173', 'https://statistics-production-032c.up.railway.app', 'https://urimafrica.online'], 
+    origin: ['http://localhost:5173', 'https://statistics-production-032c.up.railway.app', 'https://urimafrica.online','https://ted.thebenchinc.com','https://chelsy.thebenchinc.com'], 
     methods: 'GET,POST,PUT,DELETE', 
 }));
 
